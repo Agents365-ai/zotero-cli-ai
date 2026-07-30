@@ -63,10 +63,10 @@ When stdout is not a TTY, `zot` automatically emits a stable JSON envelope so ag
 
 ## Documentation
 
-Full docs live at **https://agents365-ai.github.io/zotero-cli-cc/**.
+Full docs live at **<https://agents365-ai.github.io/zotero-cli-cc/>**.
 
 | Topic | Link |
-|---|---|
+| --- | --- |
 | Installation & setup | [Getting started](https://agents365-ai.github.io/zotero-cli-cc/getting-started/installation/) |
 | Search, list, read | [Search guide](https://agents365-ai.github.io/zotero-cli-cc/guide/search/) |
 | Notes, tags, citations | [Notes & tags](https://agents365-ai.github.io/zotero-cli-cc/guide/notes-tags/), [Citations](https://agents365-ai.github.io/zotero-cli-cc/guide/citations/) |
@@ -82,17 +82,6 @@ Full docs live at **https://agents365-ai.github.io/zotero-cli-cc/**.
 | Roadmap | [`ROADMAP.md`](ROADMAP.md) |
 
 **Why zotero-cli-cc?** The only actively maintained Python CLI that reads Zotero's local SQLite database directly, with a clean read/write split: SQLite for fast offline reads, Web API for safe writes that Zotero stays aware of. See the [comparison page](https://agents365-ai.github.io/zotero-cli-cc/comparison/) for a feature-by-feature breakdown against similar tools.
-
-## Community
-
-Join us for help, Q&A, and updates:
-
-- **Discord:** https://discord.gg/79JF5Atuk
-- **WeChat:** scan the QR code below
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Agents365-ai/images_payment/main/qrcode/agents365ai_wechat_1.png" width="200" alt="WeChat Community Group">
-</p>
 
 ## Support
 
@@ -127,8 +116,8 @@ If `zot` helps you, consider supporting the author:
 
 **Agents365-ai**
 
-- Bilibili: https://space.bilibili.com/441831884
-- GitHub: https://github.com/Agents365-ai
+- Bilibili: <https://space.bilibili.com/441831884>
+- GitHub: <https://github.com/Agents365-ai>
 
 ## License
 
