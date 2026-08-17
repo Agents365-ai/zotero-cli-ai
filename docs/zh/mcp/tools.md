@@ -6,7 +6,7 @@
 
 | 工具 | 描述 | 关键参数 |
 |------|------|----------|
-| `search` | 按标题、作者、标签、全文搜索 | `query`, `collection?`, `item_type?`, `sort?`, `limit` |
+| `search` | 按标题、作者、标签、全文搜索；`ranked=True` 返回相关度排序结果（评分 + 片段，无索引） | `query`, `collection?`, `item_type?`, `sort?`, `limit`, `ranked?` |
 | `list_items` | 列出所有条目 | `item_type?`, `sort?`, `limit` |
 | `read` | 读取条目详情 + 笔记 | `key`, `detail?` |
 | `pdf` | 提取 PDF 文本 | `key`, `pages?` |
@@ -43,17 +43,17 @@
 | `tag_remove` | 删除标签 | `keys`, `tags` |
 | `collection_create` | 创建集合 | `name`, `parent_key?` |
 | `collection_move` | 移动条目到集合 | `item_key`, `collection_key` |
+| `collection_remove` | 将条目从集合中移除（条目仍保留在文献库中） | `item_key`, `collection_key` |
 | `collection_delete` | 删除集合 | `collection_key` |
 | `collection_rename` | 重命名集合 | `collection_key`, `new_name` |
 | `collection_reorganize` | 批量重组 | `plan` |
 | `trash_list` | 列出回收站条目 | `limit?` |
 | `trash_restore` | 从回收站恢复 | `key` |
 
-## 工作区工具
+## 排序检索工具
 
-工作区就是一个 Zotero 集合 —— 通过上面的 `collection_*` 工具或在 Zotero 应用中管理成员。检索是无索引的：无需构建索引，结果始终最新。
+用任意 Zotero 集合限定检索范围 —— 通过上面的 `collection_*` 工具或在 Zotero 应用中管理成员。检索是无索引的：无需构建索引，结果始终最新。如果只需要排序后的结果列表（不含证据片段），使用 `search` 并设置 `ranked=True`。
 
 | 工具 | 描述 | 关键参数 |
 |------|------|----------|
-| `workspace_query` | 按与问题的相关度对论文排序（返回带片段的排序条目） | `question`, `workspace?`, `top_k?` |
-| `ask` | 带引用键的证据包（元数据 + PDF 片段）及作答指引；由 Agent 综合答案 —— zot 不调用 LLM | `question`, `workspace?`, `evidence_k?` |
+| `ask` | 带引用键的证据包（元数据 + PDF 片段）及作答指引；由 Agent 综合答案 —— zot 不调用 LLM | `question`, `collection?`, `evidence_k?` |

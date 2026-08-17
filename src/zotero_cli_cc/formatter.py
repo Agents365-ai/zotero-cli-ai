@@ -310,12 +310,12 @@ def format_cache_list(rows: list[tuple], output_json: bool = False) -> str:
     return buf.getvalue()
 
 
-def format_workspace_query(results: list[dict], question: str, workspace: str | None, output_json: bool = False) -> str:
+def format_ranked_results(results: list[dict], question: str, collection: str | None, output_json: bool = False) -> str:
     """Render index-free ranked results produced by `core.rank.rank`."""
     if output_json:
         data = {
             "query": question,
-            "workspace": workspace,
+            "collection": collection,
             "results": [
                 {
                     "rank": i + 1,
@@ -358,11 +358,11 @@ def format_ask(
     evidence: list[dict],
     mode: str,
     output_json: bool = False,
-    workspace: str | None = None,
+    collection: str | None = None,
 ) -> str:
     data = {
         "question": question,
-        "workspace": workspace,
+        "collection": collection,
         "mode": mode,
         "evidence": evidence,
         "answer_instructions": ANSWER_INSTRUCTIONS,

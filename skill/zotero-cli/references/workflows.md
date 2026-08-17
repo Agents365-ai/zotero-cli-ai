@@ -27,8 +27,8 @@ zot collection create "drug-resistance"
 zot --json search "drug resistance cancer" --limit 20
 zot collection move ITEMKEY COLLECTIONKEY       # repeat per item
 
-# Step 2: Ranked query — no index step, always fresh
-zot --json workspace query "mechanisms of acquired resistance" --workspace drug-resistance --top-k 5
+# Step 2: Ranked search — no index step, always fresh
+zot --json search --ranked "mechanisms of acquired resistance" --collection drug-resistance --limit 5
 
 # Step 3: Drill into specific items for more context
 zot --json pdf --outline ITEMKEY
@@ -85,9 +85,9 @@ zot add --from-file dois.txt
 zot collection create "lit-review"
 zot collection move ITEMKEY COLLECTIONKEY
 
-# 3. Query for themes — runs live, no index to build
-zot --json workspace query "methodology comparison" --workspace lit-review --top-k 10
+# 3. Ranked search for themes — runs live, no index to build
+zot --json search --ranked "methodology comparison" --collection lit-review --limit 10
 
 # 4. Or get a citation-keyed evidence pack for a grounded answer
-zot --json ask "which methodologies are compared?" --workspace lit-review
+zot --json ask "which methodologies are compared?" --collection lit-review
 ```

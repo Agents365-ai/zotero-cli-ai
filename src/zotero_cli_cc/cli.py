@@ -40,7 +40,6 @@ from zotero_cli_cc.commands.tag import tag_cmd
 from zotero_cli_cc.commands.trash import trash_group
 from zotero_cli_cc.commands.update import update_cmd
 from zotero_cli_cc.commands.update_status import update_status_cmd
-from zotero_cli_cc.commands.workspace import workspace_group
 
 # Safety tiers: classifies each command so `zot --help` groups them by risk.
 # Agents browsing help see read commands first; mutating and destructive
@@ -65,7 +64,6 @@ _READ_COMMANDS = {
     "config",
     "completions",
     "mcp",
-    "workspace",
     "ask",
     "schema",
     "trash",
@@ -308,7 +306,6 @@ main.add_command(enrich_cmd, "enrich")
 main.add_command(bridge_group, "bridge")
 main.add_command(orphans_group, "orphans")
 main.add_command(update_status_cmd, "update-status")
-main.add_command(workspace_group, "workspace")
 main.add_command(ask_cmd, "ask")
 main.add_command(schema_cmd, "schema")
 main.add_command(attachment_group, "attachment")

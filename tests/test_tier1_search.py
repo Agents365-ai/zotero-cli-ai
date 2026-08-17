@@ -106,3 +106,41 @@ class TestSortOrder:
             assert dates == sorted(dates, reverse=True)
         finally:
             reader.close()
+
+
+class TestRankedSearch:
+    """`zot search --ranked` — index-free relevance-ranked mode."""
+
+    def test_ranked_json_shape(self):
+        result = _invoke(["search", "transformer attention", "--ranked", "--limit", "5"], json_output=True)
+        assert result.exit_code == 0
+        env = json.loads(result.output)
+        assert env["ok"] is True
+        data = env["data"]
+        assert data["query"] == "transformer attention"
+        assert data["collection"] is None
+        first = data["results"][0]
+        assert first["item_key"] == "ATTN001"
+        assert first["rank"] == 1
+        assert "rrf" in first["scores"]
+        assert first["snippet"]
+
+    def test_ranked_with_collection_scope(self):
+        result = _invoke(
+            ["search", "transformer attention", "--ranked", "--collection", "Transformers"], json_output=True
+        )
+        assert result.exit_code == 0
+        data = json.loads(result.output)["data"]
+        assert data["collection"] == "Transformers"
+        assert [r["item_key"] for r in data["results"]] == ["ATTN001"]
+
+    def test_ranked_unknown_collection(self):
+        result = _invoke(["search", "x", "--ranked", "--collection", "nope"])
+        assert result.exit_code == 4
+        assert "not found" in result.output.lower()
+
+    def test_ranked_no_match(self):
+        result = _invoke(["search", "zzzznotfound", "--ranked"], json_output=True)
+        assert result.exit_code == 0
+        data = json.loads(result.output)["data"]
+        assert data["results"] == []

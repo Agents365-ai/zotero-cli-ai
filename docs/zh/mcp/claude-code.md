@@ -32,9 +32,9 @@ cp -r skill/zotero-cli ~/.claude/skills/
 → Claude 运行: zot collection create "ICML 2026"
 ```
 
-## 工作区工作流
+## 集合工作流
 
-工作区就是一个 Zotero 集合。Claude Code 的典型科研工作流：
+任何深度搜索或提问都可以限定在某个 Zotero 集合内。Claude Code 的典型科研工作流：
 
 1. **创建集合** — 为你的项目建立文献集
 2. **添加论文** — 在 Zotero 应用中操作，或用 `zot collection move`
@@ -45,7 +45,7 @@ cp -r skill/zotero-cli ~/.claude/skills/
 → Claude 运行: zot collection create "llm-safety"
 
 这些论文使用了哪些方法来检测 reward hacking？
-→ Claude 运行: zot ask "reward hacking detection methods" --workspace llm-safety
+→ Claude 运行: zot ask "reward hacking detection methods" --collection llm-safety
   并基于返回的证据包综合出带引用的答案
 ```
 

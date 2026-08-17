@@ -144,8 +144,35 @@ def _handle_search(
     sort: str | None = None,
     direction: str = "desc",
     library: str = "user",
+    ranked: bool = False,
 ) -> dict:
     reader = _get_reader(library)
+    if ranked:
+        collection_key = None
+        if collection:
+            collection_key = resolve_collection_key(reader, collection)
+            if collection_key is None:
+                return {
+                    "error": f"Collection '{collection}' not found. Use collection_list to see available collections."
+                }
+        results = rank(reader, query, collection_key=collection_key, top_k=limit)
+        return {
+            "query": query,
+            "collection": collection,
+            "results": [
+                {
+                    "rank": i + 1,
+                    "score": r["score"],
+                    "scores": r["scores"],
+                    "item_key": r["item"].key,
+                    "title": r["item"].title,
+                    "creators": [c.full_name for c in r["item"].creators],
+                    "date": r["item"].date,
+                    "snippet": make_snippet(r["item"], r["terms"]),
+                }
+                for i, r in enumerate(results)
+            ],
+        }
     result = reader.search(
         query, collection=collection, item_type=item_type, sort=sort, direction=direction, limit=limit
     )
@@ -538,6 +565,15 @@ def _handle_collection_move(item_key: str, collection_key: str, library: str = "
         return {"error": str(e), "context": "collection_move"}
 
 
+def _handle_collection_remove(item_key: str, collection_key: str, library: str = "user") -> dict:
+    try:
+        writer = _get_writer(library)
+        writer.remove_from_collection(item_key, collection_key)
+        return {"item_key": item_key, "collection_key": collection_key}
+    except ZoteroWriteError as e:
+        return {"error": str(e), "context": "collection_remove"}
+
+
 def _handle_collection_delete(collection_key: str, library: str = "user") -> dict:
     try:
         writer = _get_writer(library)
@@ -695,49 +731,22 @@ def _handle_add_from_pdf(file_path: str, doi_override: str | None = None, librar
 
 
 # ---------------------------------------------------------------------------
-# Workspace / ask handlers (index-free, collection-backed)
+# Ask handler (index-free retrieval)
 # ---------------------------------------------------------------------------
 
 
-def _handle_workspace_query(question: str, workspace: str | None = None, top_k: int = 5, library: str = "user") -> dict:
+def _handle_ask(question: str, collection: str | None = None, evidence_k: int = 12, library: str = "user") -> dict:
     reader = _get_reader(library)
     collection_key = None
-    if workspace:
-        collection_key = resolve_collection_key(reader, workspace)
+    if collection:
+        collection_key = resolve_collection_key(reader, collection)
         if collection_key is None:
-            return {"error": f"Collection '{workspace}' not found. Use collection_list to see available collections."}
-    results = rank(reader, question, collection_key=collection_key, top_k=top_k)
-    return {
-        "query": question,
-        "workspace": workspace,
-        "results": [
-            {
-                "rank": i + 1,
-                "score": r["score"],
-                "scores": r["scores"],
-                "item_key": r["item"].key,
-                "title": r["item"].title,
-                "creators": [c.full_name for c in r["item"].creators],
-                "date": r["item"].date,
-                "snippet": make_snippet(r["item"], r["terms"]),
-            }
-            for i, r in enumerate(results)
-        ],
-    }
-
-
-def _handle_ask(question: str, workspace: str | None = None, evidence_k: int = 12, library: str = "user") -> dict:
-    reader = _get_reader(library)
-    collection_key = None
-    if workspace:
-        collection_key = resolve_collection_key(reader, workspace)
-        if collection_key is None:
-            return {"error": f"Collection '{workspace}' not found. Use collection_list to see available collections."}
+            return {"error": f"Collection '{collection}' not found. Use collection_list to see available collections."}
     ranked = rank(reader, question, collection_key=collection_key, top_k=evidence_k)
     evidence = build_ask_evidence(reader, ranked, evidence_k=evidence_k)
     return {
         "question": question,
-        "workspace": workspace,
+        "collection": collection,
         "mode": "index-free",
         "evidence": evidence,
         "answer_instructions": ANSWER_INSTRUCTIONS,
@@ -891,6 +900,7 @@ def search(
     direction: str = "desc",
     limit: int = 50,
     library: str = "user",
+    ranked: bool = False,
 ) -> dict:
     """Search the Zotero library by title, author, tag, or full text.
 
@@ -902,9 +912,11 @@ def search(
         direction: Sort direction — 'asc' or 'desc' (default 'desc').
         limit: Maximum number of results (default 50).
         library: Library — 'user' (default) or 'group:<id>'.
+        ranked: If True, use relevance-ranked retrieval (idf-weighted full-text
+            + metadata fusion, scores and snippets) instead of filter search.
     """
     return _handle_search(
-        query, collection, limit, item_type=item_type, sort=sort, direction=direction, library=library
+        query, collection, limit, item_type=item_type, sort=sort, direction=direction, library=library, ranked=ranked
     )
 
 
@@ -1235,6 +1247,18 @@ def collection_move(item_key: str, collection_key: str, library: str = "user") -
 
 
 @mcp.tool()
+def collection_remove(item_key: str, collection_key: str, library: str = "user") -> dict:
+    """Remove an item from a collection; the item itself stays in the library. Requires API credentials.
+
+    Args:
+        item_key: The Zotero item key.
+        collection_key: The collection to remove the item from.
+        library: Library — 'user' (default) or 'group:<id>'.
+    """
+    return _handle_collection_remove(item_key, collection_key, library=library)
+
+
+@mcp.tool()
 def collection_delete(collection_key: str, library: str = "user") -> dict:
     """Delete a collection from the Zotero library. Requires API credentials.
 
@@ -1352,45 +1376,30 @@ def add_from_pdf(file_path: str, doi_override: str | None = None, library: str =
 
 
 # ---------------------------------------------------------------------------
-# Workspace tools (index-free; a workspace is a Zotero collection)
+# Ranked retrieval / ask tools (index-free)
 # ---------------------------------------------------------------------------
 
 
 @mcp.tool()
-def workspace_query(question: str, workspace: str | None = None, top_k: int = 5, library: str = "user") -> dict:
-    """Rank papers by relevance to a natural-language question.
-
-    Index-free retrieval over Zotero's own full-text index plus metadata,
-    fused with RRF. Always fresh — there is no index to build. A workspace
-    is simply a Zotero collection; manage membership in the Zotero app or
-    via the collection_* tools.
-
-    Args:
-        question: Natural language query.
-        workspace: Optional collection name or key to scope the search
-            (default: whole library).
-        top_k: Number of results to return (default 5).
-        library: Library — 'user' (default) or 'group:<id>'.
-    """
-    return _handle_workspace_query(question, workspace=workspace, top_k=top_k, library=library)
-
-
-@mcp.tool()
-def ask(question: str, workspace: str | None = None, evidence_k: int = 12, library: str = "user") -> dict:
+def ask(question: str, collection: str | None = None, evidence_k: int = 12, library: str = "user") -> dict:
     """Retrieve a citation-keyed evidence pack to answer a question.
 
-    Returns evidence entries tagged with Zotero item keys (cite_key) plus
-    answer_instructions. zot does not call an LLM — synthesize and cite the
-    answer from the evidence yourself.
+    Index-free ranked retrieval over Zotero's own full-text index (optionally
+    scoped to a collection). Returns evidence entries tagged with Zotero item
+    keys (cite_key) plus answer_instructions. zot does not call an LLM —
+    synthesize and cite the answer from the evidence yourself.
+
+    For a plain ranked result list without evidence passages, use
+    search(query, ranked=True).
 
     Args:
         question: Natural language question.
-        workspace: Optional collection name or key to scope retrieval
+        collection: Optional collection name or key to scope retrieval
             (default: whole library).
         evidence_k: Number of evidence entries to return (default 12).
         library: Library — 'user' (default) or 'group:<id>'.
     """
-    return _handle_ask(question, workspace=workspace, evidence_k=evidence_k, library=library)
+    return _handle_ask(question, collection=collection, evidence_k=evidence_k, library=library)
 
 
 # ---------------------------------------------------------------------------

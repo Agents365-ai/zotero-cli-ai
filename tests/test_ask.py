@@ -56,10 +56,10 @@ class TestAskCLI:
         assert "pdf" in sources
 
     @patch("zotero_cli_cc.core.rank.convert_pdf_to_text", return_value="attention mechanism")
-    def test_ask_workspace_scope(self, _mock_convert):
-        result = _invoke(["ask", "attention", "--workspace", "Transformers"], json_output=True)
+    def test_ask_collection_scope(self, _mock_convert):
+        result = _invoke(["ask", "attention", "--collection", "Transformers"], json_output=True)
         data = _envelope(result.output)["data"]
-        assert data["workspace"] == "Transformers"
+        assert data["collection"] == "Transformers"
         cite_keys = {e["cite_key"] for e in data["evidence"]}
         assert cite_keys == {"ATTN001"}
 
@@ -69,8 +69,8 @@ class TestAskCLI:
         data = _envelope(result.output)["data"]
         assert len(data["evidence"]) <= 1
 
-    def test_ask_unknown_workspace(self):
-        result = _invoke(["ask", "x", "--workspace", "nope"])
+    def test_ask_unknown_collection(self):
+        result = _invoke(["ask", "x", "--collection", "nope"])
         assert result.exit_code == 4
         assert "not found" in result.output.lower()
 

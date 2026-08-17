@@ -74,7 +74,7 @@ Full docs live at **<https://agents365-ai.github.io/zotero-cli-ai/>**.
 | Notes, tags, citations | [Notes & tags](https://agents365-ai.github.io/zotero-cli-ai/guide/notes-tags/), [Citations](https://agents365-ai.github.io/zotero-cli-ai/guide/citations/) |
 | Add / update / delete items | [Item management](https://agents365-ai.github.io/zotero-cli-ai/guide/item-management/) |
 | Collections | [Collections](https://agents365-ai.github.io/zotero-cli-ai/guide/collections/) |
-| Workspaces (collections) | [Workspaces](https://agents365-ai.github.io/zotero-cli-ai/guide/workspace/) |
+| Ranked search & ask (collections) | [Search guide](https://agents365-ai.github.io/zotero-cli-ai/guide/search/) |
 | PDF extraction | [PDF](https://agents365-ai.github.io/zotero-cli-ai/guide/pdf/) |
 | Preprint → published | [update-status](https://agents365-ai.github.io/zotero-cli-ai/guide/update-status/) |
 | MCP setup & tools | [MCP](https://agents365-ai.github.io/zotero-cli-ai/mcp/setup/) |
