@@ -60,4 +60,4 @@ cp -r skill/zotero-cli ~/.claude/skills/
 
 - [使用指南](../guide/search.md) — 完整命令参考
 - [MCP 服务器](../mcp/setup.md) — 搭配 Claude Desktop、Cursor、LM Studio 使用
-- [工作区](../guide/workspace.md) — 按主题组织论文，支持 RAG 检索
+- [工作区](../guide/workspace.md) — 对集合进行自然语言排序检索，无需构建索引

@@ -1,92 +1,92 @@
 # Workspaces
 
-## Why Workspaces?
+A workspace is simply a Zotero collection. There is nothing to create inside zot and nothing stored locally — curate the collection in the Zotero app (or via `zot collection *`), and zot queries it live. There is no index to build, so results are always fresh.
 
-Zotero collections are great for permanent library organization, but research often needs temporary, cross-cutting groupings — "all papers for my ICML submission", "papers to discuss at lab meeting", or "references for Chapter 3".
+## Manage Membership
 
-Workspaces fill this gap: lightweight, local-only views that don't modify your Zotero library. Each workspace is a TOML file at `~/.config/zot/workspaces/<name>.toml`. No API key needed, no syncing side effects.
-
-## Create a Workspace
+Organize papers in the Zotero app, or from the CLI:
 
 ```bash
-zot workspace new llm-safety --description "LLM alignment papers"
+zot collection list                        # All collections (names + keys)
+zot collection items COLL_KEY              # Items in a collection
+zot collection create "LLM Safety"         # Create a collection (needs API key)
+zot collection move ITEM_KEY COLL_KEY      # Add an item to a collection
+zot collection rename COLL_KEY "New Name"  # Rename
+zot collection delete COLL_KEY             # Delete a collection
+zot collection reorganize plan.json        # Batch create + move from a JSON plan
 ```
 
-Names must be kebab-case (e.g., `llm-safety`, `protein-folding`).
+## Ranked Search
 
-## Add Items
+`zot workspace query` ranks papers by relevance to a natural-language question:
 
 ```bash
-zot workspace add llm-safety ABC123 DEF456 GHI789
+zot workspace query "reward hacking methods"
+zot workspace query "reward hacking methods" --workspace "LLM Safety"
+zot workspace query "tumour immunity" --workspace "CR | HCC" --top-k 10
 ```
 
-## Bulk Import
+- `--workspace` scopes the search to a collection (name or key). Omit it to search the whole library.
+- `--top-k` sets the number of results (default: 5).
+
+Retrieval is index-free: items are scored with idf-weighted term coverage from Zotero's own full-text index tables (the same index the Zotero app builds), fused with metadata matching (title/abstract/creators/tags/notes) via reciprocal rank fusion. A paper added to the collection a second ago is already searchable.
+
+JSON output:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "query": "reward hacking methods",
+    "workspace": "LLM Safety",
+    "results": [
+      {
+        "rank": 1,
+        "score": 0.0328,
+        "scores": { "rrf": 0.0328, "fulltext": 4.5612, "metadata": 2.0 },
+        "item_key": "ABC123",
+        "title": "...",
+        "creators": ["..."],
+        "date": "2024",
+        "snippet": "..."
+      }
+    ]
+  }
+}
+```
+
+## Evidence Packs
+
+`zot ask` goes one step further: after ranking, it extracts PDF passages around the query terms on the fly (pdfium, cached) and returns a citation-keyed evidence pack. zot never calls an LLM — the calling agent synthesizes a grounded answer from the evidence.
 
 ```bash
-zot workspace import llm-safety --collection "Alignment"
-zot workspace import llm-safety --tag "safety"
-zot workspace import llm-safety --search "RLHF"
+zot ask "how does attention scale?"
+zot ask "what dataset was used?" --workspace papers --evidence-k 8
 ```
 
-## Browse
+- `--workspace` scopes retrieval to a collection (name or key). Omit it for the whole library.
+- `--evidence-k` sets the number of evidence entries (default: 12).
 
-```bash
-zot workspace list                          # All workspaces
-zot workspace show llm-safety               # Items with metadata
-zot workspace search "reward" --workspace llm-safety
+JSON output:
+
+```json
+{
+  "ok": true,
+  "data": {
+    "question": "what dataset was used?",
+    "workspace": "papers",
+    "mode": "index-free",
+    "evidence": [
+      { "cite_key": "ABC123", "source": "metadata", "text": "Title: ...", "scores": { "rrf": 0.0328, "fulltext": 4.5612, "metadata": 2.0 } },
+      { "cite_key": "ABC123", "source": "pdf", "text": "...passage around the query terms...", "scores": { "rrf": 0.0328, "fulltext": 4.5612, "metadata": 2.0 } }
+    ],
+    "answer_instructions": "Answer the question using ONLY the evidence below. Cite each claim with its cite_key in parentheses, e.g. (ABCD1234). ..."
+  }
+}
 ```
 
-## Export
+## Migrating from Earlier Versions
 
-```bash
-zot workspace export llm-safety                       # Markdown
-zot workspace export llm-safety --format json         # JSON
-zot workspace export llm-safety --format bibtex       # BibTeX
-```
+Earlier versions kept local workspaces under `~/.config/zot/workspaces/` (JSON files plus a `*.idx.sqlite` BM25/embedding index) with their own subcommands (`workspace new/add/remove/list/show/export/import/search/index/delete`) and optional embedding providers (`[embedding]` in `config.toml`, `ZOT_EMBEDDING_*` environment variables). All of that has been removed — the old files are unused and can be deleted.
 
-## RAG Search
-
-Build an index over workspace papers for natural language querying:
-
-### Build Index
-
-```bash
-zot workspace index llm-safety
-```
-
-This indexes metadata + PDF full text using BM25.
-
-### Query
-
-```bash
-zot workspace query "reward hacking methods" --workspace llm-safety
-```
-
-Returns ranked text chunks from indexed papers.
-
-### Semantic Search (Optional)
-
-For hybrid BM25 + vector retrieval, configure an embedding endpoint:
-
-```bash
-export ZOT_EMBEDDING_URL="https://api.jina.ai/v1/embeddings"
-export ZOT_EMBEDDING_KEY="your-jina-key"   # 10M free tokens
-zot workspace index llm-safety --force      # Rebuild with embeddings
-zot workspace query "reward hacking" --workspace llm-safety --mode hybrid
-```
-
-Any OpenAI-compatible `/v1/embeddings` endpoint also works (Aliyun Bailian workspace URLs, LiteLLM, Ollama, vLLM, ...):
-
-```bash
-export ZOT_EMBEDDING_PROVIDER="openai"
-export ZOT_EMBEDDING_URL="https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
-export ZOT_EMBEDDING_KEY="your-key"
-export ZOT_EMBEDDING_MODEL="text-embedding-v3"
-```
-
-## Manage
-
-```bash
-zot workspace remove llm-safety ABC123      # Remove item
-zot workspace delete llm-safety --yes       # Delete workspace
-```
+To migrate, recreate the same paper sets as Zotero collections (in the app, or with `zot collection create` + `zot collection move`), then use `zot workspace query` / `zot ask` as above. No indexing step is needed.

@@ -15,7 +15,7 @@
 | **Note Management** | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
 | **Collections** | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ | ✅ |
 | **Citation Export** | ✅ BibTeX/CSL-JSON/RIS | ✅ | ❌ | ✅ Excel | ❌ | ❌ | ❌ |
-| **Semantic Search** | **✅ Built-in (workspace RAG)** | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
+| **Ranked NL Search** | **✅ Index-free (no embeddings, always fresh)** | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
 | **Detail Levels** | **✅** | ❌ | ❌ | ❌ | ✅ | ✅ | ❌ |
 | **Multi-Profile** | **✅** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **PDF Cache** | **✅** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |

@@ -28,10 +28,12 @@ zot cite ABC123 --no-copy            # 仅打印，不复制
 | **Nature** | Author, A. B. Title. *Journal* **Volume**, Pages (Year). |
 | **Vancouver** | Author AB. Title. Journal. Year;Volume(Issue):Pages. |
 
-## 通过工作区批量导出
+## 批量导出
 
-导出多篇论文时，可使用 [工作区导出](workspace.md)：
+`zot export` 一次只接受一个条目键。要导出某个集合中的所有论文，可遍历 `zot collection items`：
 
 ```bash
-zot workspace export my-project --format bibtex
+zot --json collection items COLL_KEY | jq -r '.data[].key' | while read -r key; do
+  zot export "$key"
+done
 ```

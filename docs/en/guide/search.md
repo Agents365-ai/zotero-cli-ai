@@ -9,7 +9,11 @@
 3. **Tags** — exact tag matching
 4. **PDF fulltext index** — Zotero's built-in fulltext index
 
-For deeper content search with BM25 ranking and optional semantic matching, use [workspace query](workspace.md).
+## Choosing a Search Command
+
+- **`zot search`** — quick keyword lookup across metadata and the full-text index (this page).
+- **[`zot workspace query`](workspace.md)** — ranked deep search over a natural-language question, optionally scoped to a collection. Index-free: results are always fresh.
+- **`zot ask`** — same ranked retrieval, but returns a citation-keyed evidence pack (metadata + PDF passages) for an agent to synthesize an answer from.
 
 ## Basic Search
 

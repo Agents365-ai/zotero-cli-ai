@@ -182,6 +182,30 @@ zot collection rename COLLECTIONKEY "New Name"
 zot collection delete COLLECTIONKEY
 ```
 
+## Workspace Query & Ask
+
+A workspace is simply a Zotero collection — manage membership in the Zotero
+app or with the `zot collection *` commands above. There is no index to build:
+queries run live against Zotero's own full-text index fused with metadata
+matching, so results are always fresh.
+
+```bash
+zot --json workspace query "reward hacking"                       # whole library
+zot --json workspace query "RLHF" --workspace "LLM Safety" --top-k 10
+zot --json ask "what dataset was used?" --workspace papers        # evidence pack
+zot --json ask "what dataset was used?" --evidence-k 8            # default: 12
+```
+
+`--workspace` takes a collection name or key (nested collections resolve by
+name); omit it to search the whole library. `zot` never calls an LLM.
+
+`workspace query` JSON: `{query, workspace, results: [{rank, score, scores,
+item_key, title, creators, date, snippet}]}`.
+
+`ask` JSON: `{question, workspace, mode: "index-free", evidence: [{cite_key,
+source, text, scores}], answer_instructions}` — `source` is `metadata` or
+`pdf`; the agent synthesizes and cites the answer from the evidence.
+
 ## Duplicates, Recent & Trash
 
 ```bash

@@ -99,44 +99,6 @@ def load_config(path: Path | None = None, profile: str | None = None) -> AppConf
 
 
 @dataclass
-class EmbeddingConfig:
-    url: str = "https://api.jina.ai/v1/embeddings"
-    api_key: str = ""
-    model: str = "jina-embeddings-v3"
-    provider: str = "jina"
-
-    @property
-    def is_configured(self) -> bool:
-        return bool(self.url and self.api_key)
-
-
-_SENTINEL = object()
-
-
-def load_embedding_config(path: Path | None = None, *, apply_env_overrides: object = _SENTINEL) -> EmbeddingConfig:
-    explicit_path = path is not None
-    path = path or CONFIG_FILE
-    defaults = EmbeddingConfig()
-    if path.exists():
-        with open(path, "rb") as f:
-            data = tomllib.load(f)
-        emb = data.get("embedding", {})
-        defaults = EmbeddingConfig(
-            url=emb.get("url", defaults.url),
-            api_key=emb.get("api_key", defaults.api_key),
-            model=emb.get("model", defaults.model),
-            provider=emb.get("provider", defaults.provider),
-        )
-    should_apply_env = apply_env_overrides is True or (apply_env_overrides is _SENTINEL and not explicit_path)
-    if should_apply_env:
-        defaults.url = os.environ.get("ZOT_EMBEDDING_URL", defaults.url)
-        defaults.api_key = os.environ.get("ZOT_EMBEDDING_KEY", defaults.api_key)
-        defaults.model = os.environ.get("ZOT_EMBEDDING_MODEL", defaults.model)
-        defaults.provider = os.environ.get("ZOT_EMBEDDING_PROVIDER", defaults.provider)
-    return defaults
-
-
-@dataclass
 class PdfConfig:
     extractor: str = "pdfium"
     mineru_token: str = ""

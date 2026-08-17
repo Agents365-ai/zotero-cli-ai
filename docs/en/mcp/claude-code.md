@@ -29,28 +29,25 @@ Show me details of this paper
 Export BibTeX for these papers
 → Claude runs: zot export ABC123
 
-Create a workspace for my ICML submission
-→ Claude runs: zot workspace new icml-2026 --description "ICML 2026 submission"
+Create a collection for my ICML submission
+→ Claude runs: zot collection create "ICML 2026"
 ```
 
-## Workspace + RAG Workflow
+## Workspace Workflow
 
-A typical research workflow with Claude Code:
+A workspace is simply a Zotero collection. A typical research workflow with Claude Code:
 
-1. **Create a workspace** for your project
-2. **Import papers** from collections, tags, or search
-3. **Build the RAG index** for semantic search
-4. **Query** the workspace with natural language
+1. **Create a collection** for your project
+2. **Add papers** to it — in the Zotero app, or with `zot collection move`
+3. **Ask questions** — no index to build, results are always fresh
 
 ```
-Create a workspace called "llm-safety" and import all papers tagged "alignment"
-→ Claude creates workspace and imports items
-
-Index the workspace
-→ Claude runs: zot workspace index llm-safety
+Create a collection called "llm-safety" for my alignment papers
+→ Claude runs: zot collection create "llm-safety"
 
 What methods do these papers use for reward hacking detection?
-→ Claude queries the workspace RAG index and synthesizes an answer
+→ Claude runs: zot ask "reward hacking detection methods" --workspace llm-safety
+  and synthesizes a cited answer from the returned evidence pack
 ```
 
 ## Shell Completions

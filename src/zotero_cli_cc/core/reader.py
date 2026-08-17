@@ -35,10 +35,9 @@ MIN_SCHEMA_VERSION = 100
 MAX_SCHEMA_VERSION = 200
 
 # SQLITE_MAX_VARIABLE_NUMBER can be as low as 999 on older SQLite builds, so
-# large IN (...) parameter lists are executed in batches (same pattern as
-# rag_index.get_bm25_terms_bulk). Sorted queries keep a single SQL ORDER BY up
-# to _SORT_IN_THRESHOLD ids (modern SQLite allows 32766 variables) and only
-# fall back to Python-side sorting beyond that.
+# large IN (...) parameter lists are executed in batches. Sorted queries keep a
+# single SQL ORDER BY up to _SORT_IN_THRESHOLD ids (modern SQLite allows 32766
+# variables) and only fall back to Python-side sorting beyond that.
 _IN_BATCH_SIZE = 900
 _SORT_IN_THRESHOLD = 30000
 
@@ -735,6 +734,40 @@ class ZoteroReader:
         """
         attachments = self.get_pdf_attachments(key, skip_tags=skip_tags)
         return attachments[0] if attachments else None
+
+    def fulltext_candidates(self, collection_key: str | None = None) -> list[tuple[str, int, int]]:
+        """Return (parent_item_key, attachment_itemID, indexedChars) for indexed attachments.
+
+        Used by `core.rank` for index-free full-text ranking over Zotero's own
+        fulltext* tables. `collection_key` restricts the scope to that
+        collection's items. Returns [] when the database has no full-text index
+        tables (very old schema) or nothing in scope is indexed.
+        """
+        conn = self._connect()
+        col_sql = ""
+        col_params: tuple = ()
+        if collection_key is not None:
+            col_row = conn.execute(
+                "SELECT collectionID FROM collections WHERE libraryID = ? AND key = ?",
+                (self._library_id, collection_key),
+            ).fetchone()
+            if col_row is None:
+                return []
+            col_sql = " AND i.itemID IN (SELECT itemID FROM collectionItems WHERE collectionID = ?)"
+            col_params = (col_row["collectionID"],)
+        try:
+            rows = conn.execute(
+                "SELECT i.key AS parent_key, ia.itemID AS att_id, fi.indexedChars AS chars "
+                "FROM fulltextItems fi "
+                "JOIN itemAttachments ia ON fi.itemID = ia.itemID "
+                "JOIN items i ON ia.parentItemID = i.itemID "
+                f"WHERE ia.parentItemID IS NOT NULL AND i.itemTypeID {self._get_excluded_sql()} "
+                f"AND i.libraryID = ?{col_sql}",
+                (self._library_id, *col_params),
+            ).fetchall()
+        except sqlite3.OperationalError:
+            return []  # no fulltext* tables in this database
+        return [(r["parent_key"], r["att_id"], r["chars"] or 0) for r in rows]
 
     def find_orphan_attachments(self) -> list[OrphanAttachment]:
         """Find storage-backed attachments whose file is missing from local storage.

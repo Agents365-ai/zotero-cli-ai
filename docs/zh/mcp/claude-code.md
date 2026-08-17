@@ -28,28 +28,25 @@ cp -r skill/zotero-cli ~/.claude/skills/
 导出这些论文的 BibTeX
 → Claude 运行: zot export ABC123
 
-为我的 ICML 投稿创建一个工作区
-→ Claude 运行: zot workspace new icml-2026 --description "ICML 2026 submission"
+为我的 ICML 投稿创建一个集合
+→ Claude 运行: zot collection create "ICML 2026"
 ```
 
-## 工作区 + RAG 工作流
+## 工作区工作流
 
-Claude Code 的典型科研工作流：
+工作区就是一个 Zotero 集合。Claude Code 的典型科研工作流：
 
-1. **创建工作区** — 为你的项目建立文献集
-2. **导入论文** — 从集合、标签或搜索结果导入
-3. **构建 RAG 索引** — 支持语义搜索
-4. **查询** — 用自然语言提问
+1. **创建集合** — 为你的项目建立文献集
+2. **添加论文** — 在 Zotero 应用中操作，或用 `zot collection move`
+3. **提问** — 无需构建索引，结果始终最新
 
 ```
-创建一个叫 "llm-safety" 的工作区，导入所有标签为 "alignment" 的论文
-→ Claude 创建工作区并导入条目
-
-索引这个工作区
-→ Claude 运行: zot workspace index llm-safety
+创建一个叫 "llm-safety" 的集合来放我的 alignment 论文
+→ Claude 运行: zot collection create "llm-safety"
 
 这些论文使用了哪些方法来检测 reward hacking？
-→ Claude 查询工作区 RAG 索引并综合回答
+→ Claude 运行: zot ask "reward hacking detection methods" --workspace llm-safety
+  并基于返回的证据包综合出带引用的答案
 ```
 
 ## Shell 自动补全

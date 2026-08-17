@@ -310,55 +310,39 @@ def format_cache_list(rows: list[tuple], output_json: bool = False) -> str:
     return buf.getvalue()
 
 
-def format_workspace_list(workspaces: list, output_json: bool = False) -> str:
-    if output_json:
-        data = [
-            {
-                "name": ws.name,
-                "description": ws.description,
-                "items": len(ws.items),
-                "created": ws.created,
-            }
-            for ws in workspaces
-        ]
-        return _dump(envelope_ok(data, meta={"count": len(workspaces)}))
-    buf = StringIO()
-    console = Console(file=buf, force_terminal=False, width=120)
-    table = Table(show_header=True, header_style="bold")
-    table.add_column("Name", style="cyan", width=20)
-    table.add_column("Description", width=50)
-    table.add_column("Items", justify="right", width=8)
-    table.add_column("Created", width=20)
-    for ws in workspaces:
-        desc = ws.description[:47] + "..." if len(ws.description) > 50 else ws.description
-        created = ws.created[:10] if len(ws.created) >= 10 else ws.created
-        table.add_row(ws.name, desc, str(len(ws.items)), created)
-    console.print(table)
-    return buf.getvalue()
-
-
-def format_workspace_query(results: list, mode: str, output_json: bool = False) -> str:
+def format_workspace_query(results: list[dict], question: str, workspace: str | None, output_json: bool = False) -> str:
+    """Render index-free ranked results produced by `core.rank.rank`."""
     if output_json:
         data = {
-            "mode": mode,
+            "query": question,
+            "workspace": workspace,
             "results": [
                 {
                     "rank": i + 1,
-                    "score": round(r[1], 4),
-                    "item_key": r[2]["item_key"],
-                    "source": r[2]["source"],
-                    "content": r[2]["content"][:500],
+                    "score": r["score"],
+                    "scores": r["scores"],
+                    "item_key": r["item"].key,
+                    "title": r["item"].title,
+                    "creators": [c.full_name for c in r["item"].creators],
+                    "date": r["item"].date,
+                    "snippet": r.get("snippet", ""),
                 }
                 for i, r in enumerate(results)
             ],
         }
-        return _dump(envelope_ok(data))
+        return _dump(envelope_ok(data, meta={"count": len(results)}))
     buf = StringIO()
     console = Console(file=buf, force_terminal=False, width=120)
-    for i, (cid, score, chunk) in enumerate(results):
-        preview = chunk["content"][:120].replace("\n", " ")
-        console.print(f"[{i + 1}] Score: {score:.2f} | {chunk['item_key']} | {chunk['source']}")
-        console.print(f"    {preview}...")
+    for i, r in enumerate(results):
+        item = r["item"]
+        authors = ", ".join(c.full_name for c in item.creators[:3])
+        if len(item.creators) > 3:
+            authors += " et al."
+        console.print(f"[{i + 1}] {r['score']:.4f} | {item.key} | {item.title}")
+        console.print(f"    {authors} | {item.date or 'N/A'}")
+        snippet = r.get("snippet", "")
+        if snippet:
+            console.print(f"    {snippet[:200]}")
     return buf.getvalue()
 
 
@@ -369,9 +353,16 @@ ANSWER_INSTRUCTIONS = (
 )
 
 
-def format_ask(question: str, evidence: list[dict], mode: str, output_json: bool = False) -> str:
+def format_ask(
+    question: str,
+    evidence: list[dict],
+    mode: str,
+    output_json: bool = False,
+    workspace: str | None = None,
+) -> str:
     data = {
         "question": question,
+        "workspace": workspace,
         "mode": mode,
         "evidence": evidence,
         "answer_instructions": ANSWER_INSTRUCTIONS,

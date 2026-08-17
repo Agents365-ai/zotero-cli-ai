@@ -1,11 +1,11 @@
 ---
 name: zotero-cli
-description: Use when user mentions papers, references, citations, Zotero, literature, bibliography, workspaces, or needs to search, read, export, or organize documents. Handles all zot CLI operations including workspace-based RAG search.
+description: Use when user mentions papers, references, citations, Zotero, literature, bibliography, workspaces, or needs to search, read, export, or organize documents. Handles all zot CLI operations including ranked search over Zotero collections.
 ---
 
 # Zotero CLI Skill
 
-`zot` is an all-in-one Zotero CLI: search, CRUD, PDF extraction, citation export, and workspace-based RAG. Local SQLite for reads, Zotero Web API for writes.
+`zot` is an all-in-one Zotero CLI: search, CRUD, PDF extraction, citation export, and ranked retrieval over collections. Local SQLite for reads, Zotero Web API for writes.
 
 ## Quick Start
 
@@ -15,7 +15,7 @@ zot --detail minimal search "transformer attention"     # Search papers (minimal
 zot --detail full search "transformer attention"        # Search papers (full output)
 zot --json read ABC123                                  # View paper details (JSON)
 zot export ABC123                                       # Export BibTeX
-zot workspace query "RLHF" --workspace my-ws            # Workspace RAG search
+zot workspace query "RLHF" --workspace my-collection    # Ranked search scoped to a collection
 ```
 
 ## Critical Rules
@@ -24,9 +24,8 @@ zot workspace query "RLHF" --workspace my-ws            # Workspace RAG search
 2. **Windows CJK encoding**: On Windows with a CJK locale, recent `zot` versions auto-reconfigure stdout to UTF-8. For older versions or subprocess calls, set `PYTHONIOENCODING=utf-8`. See `references/windows-encoding.md`.
 3. **Write safety**: Use `--dry-run` to preview mutations. Pass `--idempotency-key` on retries.
 4. **Large PDFs**: Use `--outline` first, then `--section N` (the heading number from the outline) to extract selectively. Avoid pulling full text when >20k chars.
-5. **Workspace RAG index**: Do not `--force` rebuild without user confirmation — it is slow.
-6. **Find Full Text**: `zot find-pdf KEY` fetches paywalled PDFs but needs Zotero desktop running + the bridge plugin. One-time setup: `zot bridge install`. See `references/commands.md`.
-7. **Canonical schema**: Run `zot schema <cmd>` for exhaustive flags, types, and safety tiers.
+5. **Find Full Text**: `zot find-pdf KEY` fetches paywalled PDFs but needs Zotero desktop running + the bridge plugin. One-time setup: `zot bridge install`. See `references/commands.md`.
+6. **Canonical schema**: Run `zot schema <cmd>` for exhaustive flags, types, and safety tiers.
 
 ## Routing Table
 
@@ -53,12 +52,12 @@ zot workspace query "RLHF" --workspace my-ws            # Workspace RAG search
 | Find duplicates | `zot --json duplicates` |
 | Recent items | `zot --json recent --days 7` |
 | Library stats | `zot --json stats` |
-| Workspace create | `zot workspace new NAME` |
-| Workspace RAG query | `zot workspace query "q" --workspace NAME` |
-| Ask (evidence pack) | `zot --json ask "question" --workspace NAME` |
+| Collection create (= workspace) | `zot collection create "NAME"` |
+| Ranked deep search | `zot --json workspace query "q" --workspace COLL` |
+| Ask (evidence pack) | `zot --json ask "question" --workspace COLL` |
 | Group library | `zot --library group:ID search "q"` |
 
-**Rule of thumb**: `zot search` for quick metadata lookups. `zot workspace query` for deep content search over curated papers. `zot ask` when you need a citation-keyed evidence pack to write a grounded answer — it returns chunks tagged with their Zotero item key plus `answer_instructions`; `zot` does not call an LLM, so *you* synthesize and cite the answer from the evidence.
+**Rule of thumb**: `zot search` for quick metadata + full-text lookups. `zot workspace query` for ranked deep search, optionally scoped to a collection (a workspace *is* a Zotero collection — no index to build). `zot ask` when you need a citation-keyed evidence pack to write a grounded answer — it returns chunks tagged with their Zotero item key plus `answer_instructions`; `zot` does not call an LLM, so *you* synthesize and cite the answer from the evidence.
 
 ## Global Flags
 
@@ -81,6 +80,6 @@ zot workspace query "RLHF" --workspace my-ws            # Workspace RAG search
 ## References
 
 - `references/commands.md` — Full command reference with examples
-- `references/workspaces.md` — Workspace management and RAG deep dive
+- `references/workspaces.md` — Workspaces (Zotero collections) and ranked retrieval
 - `references/workflows.md` — Common multi-step workflow patterns
 - `references/windows-encoding.md` — Windows CJK encoding fix

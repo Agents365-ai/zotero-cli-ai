@@ -1,4 +1,4 @@
-"""End-to-end integration tests for PDF extraction and workspace index with extractors."""
+"""End-to-end integration tests for PDF extraction with extractors and the PdfCache."""
 
 from __future__ import annotations
 
@@ -131,40 +131,6 @@ class TestPdfCmdWithExtractors:
         assert "text" in data
 
 
-class TestWorkspaceIndexWithExtractor:
-    def test_workspace_index_with_pymupdf_extractor(self, tmp_path):
-        with patch("zotero_cli_cc.commands.workspace.workspaces_dir", return_value=tmp_path):
-            _invoke(["workspace", "new", "test-ext"])
-            _invoke(["workspace", "add", "test-ext", "ATTN001"])
-
-            with patch("zotero_cli_cc.commands.workspace.convert_pdf_to_text") as mock_convert:
-                mock_convert.return_value = ""
-                result = _invoke(["workspace", "index", "test-ext", "--extractor", "pymupdf"])
-
-        assert result.exit_code == 0
-        mock_convert.assert_called()
-        call_args = mock_convert.call_args
-        assert call_args.kwargs.get("extractor_name") == "pymupdf" or (
-            len(call_args.args) >= 2 and call_args.args[1] == "pymupdf"
-        )
-
-    def test_workspace_index_with_mineru_extractor(self, tmp_path):
-        with patch("zotero_cli_cc.commands.workspace.workspaces_dir", return_value=tmp_path):
-            _invoke(["workspace", "new", "test-ext-m"])
-            _invoke(["workspace", "add", "test-ext-m", "ATTN001"])
-
-            with patch("zotero_cli_cc.commands.workspace.convert_pdf_to_text") as mock_convert:
-                mock_convert.return_value = ""
-                result = _invoke(["workspace", "index", "test-ext-m", "--extractor", "mineru"])
-
-        assert result.exit_code == 0
-        mock_convert.assert_called()
-        call_args = mock_convert.call_args
-        assert call_args.kwargs.get("extractor_name") == "mineru" or (
-            len(call_args.args) >= 2 and call_args.args[1] == "mineru"
-        )
-
-
 class TestPdfCacheIsolationIntegration:
     def test_cache_isolation_between_pymupdf_and_mineru(self, tmp_path):
         cache_db = tmp_path / "cache.sqlite"
@@ -200,8 +166,8 @@ class TestPdfCacheIsolationIntegration:
         cache.close()
 
 
-class TestPdfAndWorkspaceIntegration:
-    def test_pdf_then_workspace_index_uses_same_cache(self):
+class TestPdfCommandCacheIntegration:
+    def test_pdf_command_populates_cache(self):
         with patch("zotero_cli_cc.core.pdf_cache.PdfCache") as mock_cache_cls:
             mock_cache = MagicMock()
             mock_cache.get.return_value = None
