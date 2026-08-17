@@ -7,6 +7,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-08-17
+
 ### Changed
 
 - **PyPI distribution renamed** `zotero-cli-cc` → `zotero-cli-ai`. Install or
@@ -16,6 +18,23 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   further updates; `zotero-cli` is an unrelated older project.
 - Project branding unified as "zotero-cli — A Zotero CLI for Any AI Agent"
   (was positioned as Claude Code-only).
+
+### Fixed
+
+- **`zot config profile set` was a silent no-op** on configs written by `zot`
+  itself (single-quoted TOML values weren't matched); `save_config` now emits
+  properly escaped double-quoted TOML, and `config.toml` is written `0600`
+  with the config dir at `0700` (#89).
+- **`update-status` and `pdf` broke the JSON agent contract** — prose mixed
+  into stdout. All machine output now goes through the JSON envelope, prose
+  to stderr (#89).
+- **Library-scale reads could exceed `SQLITE_MAX_VARIABLE_NUMBER`** — the
+  remaining `IN (...)` clauses are batched, with a Python-side sort fallback
+  for very large sorted queries; database paths containing `?`, `#` or `%`
+  no longer corrupt the SQLite URI (#89).
+- **`zot open` on Windows** uses `os.startfile` instead of `shell=True`;
+  MinerU split chunks go to a temporary directory instead of polluting
+  Zotero storage (#89).
 
 ## [0.10.0] - 2026-07-15
 
