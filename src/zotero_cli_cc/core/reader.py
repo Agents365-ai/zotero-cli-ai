@@ -728,9 +728,9 @@ class ZoteroReader:
     def get_pdf_attachment(self, key: str, skip_tags: set[str] | None = None) -> Attachment | None:
         """Return the first PDF attachment, skipping any tagged with a tag in `skip_tags`.
 
-        `skip_tags` lets callers (e.g. the RAG indexer) exclude redundant
-        attachments such as machine-translated copies or slides that carry a
-        marker tag like `skip-index`.
+        `skip_tags` lets callers exclude redundant attachments such as
+        machine-translated copies or slides that carry a marker tag like
+        `skip-index`.
         """
         attachments = self.get_pdf_attachments(key, skip_tags=skip_tags)
         return attachments[0] if attachments else None

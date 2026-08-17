@@ -27,9 +27,9 @@ theme:
     - content.code.copy
 
 exclude_docs: |
-  superpowers/
-  gap-analysis.md
-  agent-interface.md
+  /superpowers/
+  /gap-analysis.md
+  /agent-interface.md
 
 plugins:
   - search
@@ -56,6 +56,9 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - attr_list
   - md_in_html
+  - pymdownx.snippets:
+      base_path:
+        - .
   - toc:
       permalink: true
 
