@@ -5,9 +5,12 @@ import re
 import shutil
 import sqlite3
 import tempfile
+import urllib.parse
 import warnings
+from collections.abc import Iterator
 from difflib import SequenceMatcher
 from pathlib import Path
+from typing import Any
 
 from zotero_cli_cc.models import (
     Attachment,
@@ -30,6 +33,29 @@ _EXCLUDED_TYPE_NAMES = ("attachment", "note", "annotation")
 # Tested schema version range (Zotero 6–8)
 MIN_SCHEMA_VERSION = 100
 MAX_SCHEMA_VERSION = 200
+
+# SQLITE_MAX_VARIABLE_NUMBER can be as low as 999 on older SQLite builds, so
+# large IN (...) parameter lists are executed in batches (same pattern as
+# rag_index.get_bm25_terms_bulk). Sorted queries keep a single SQL ORDER BY up
+# to _SORT_IN_THRESHOLD ids (modern SQLite allows 32766 variables) and only
+# fall back to Python-side sorting beyond that.
+_IN_BATCH_SIZE = 900
+_SORT_IN_THRESHOLD = 30000
+
+_NOCASE_TRANS = str.maketrans("ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijklmnopqrstuvwxyz")
+
+
+def _in_batches(ids: list[int], size: int | None = None) -> Iterator[list[int]]:
+    """Yield an id list in chunks small enough for SQLite's variable limit."""
+    if size is None:
+        size = _IN_BATCH_SIZE  # read at call time so tests can monkeypatch
+    for i in range(0, len(ids), size):
+        yield ids[i : i + size]
+
+
+def _nocase_key(value: str) -> str:
+    """ASCII-only case fold, matching SQLite's COLLATE NOCASE."""
+    return value.translate(_NOCASE_TRANS)
 
 
 class ZoteroReader:
@@ -55,7 +81,8 @@ class ZoteroReader:
                 f"  Run 'zot config init --data-dir <path>' to set the correct data directory."
             )
         # immutable=1 skips WAL, avoids lock contention with running Zotero desktop
-        uri_path = self._db_path.as_posix()
+        # Percent-encode so paths containing '?', '#' or '%' don't corrupt the URI
+        uri_path = urllib.parse.quote(self._db_path.as_posix())
         try:
             conn = sqlite3.connect(
                 f"file:{uri_path}?mode=ro&immutable=1",
@@ -327,13 +354,13 @@ class ZoteroReader:
                 (item_type,),
             ).fetchone()
             if type_row:
-                typed_items = conn.execute(
-                    "SELECT itemID FROM items WHERE itemTypeID = ? AND itemID IN ({})".format(
-                        ",".join("?" * len(item_ids))
-                    ),
-                    (type_row["itemTypeID"], *item_ids),
-                ).fetchall()
-                item_ids = {r["itemID"] for r in typed_items}
+                rows = self._batched_in_query(
+                    conn,
+                    "SELECT itemID FROM items WHERE itemTypeID = ? AND itemID IN ({ph})",
+                    sorted(item_ids),
+                    (type_row["itemTypeID"],),
+                )
+                item_ids = {r["itemID"] for r in rows}
             else:
                 item_ids = set()
 
@@ -342,37 +369,75 @@ class ZoteroReader:
 
         if sort and item_ids:
             dir_sql = "DESC" if direction == "desc" else "ASC"
-            ph = ",".join("?" * len(item_ids))
-            id_list = list(item_ids)
+            reverse = direction == "desc"
+            id_list = sorted(item_ids)
 
             if sort in ("dateAdded", "dateModified"):
-                rows = conn.execute(
-                    f"SELECT itemID FROM items WHERE itemID IN ({ph}) ORDER BY {sort} {dir_sql} LIMIT ? OFFSET ?",
-                    (*id_list, limit, offset),
-                ).fetchall()
-                target_ids = [r["itemID"] for r in rows]
+                if len(id_list) <= _SORT_IN_THRESHOLD:
+                    ph = ",".join("?" * len(id_list))
+                    rows = conn.execute(
+                        f"SELECT itemID FROM items WHERE itemID IN ({ph}) ORDER BY {sort} {dir_sql} LIMIT ? OFFSET ?",
+                        (*id_list, limit, offset),
+                    ).fetchall()
+                    target_ids = [r["itemID"] for r in rows]
+                else:
+                    # Oversized IN list: fetch sort keys batched, sort in Python
+                    pairs = self._batched_in_query(
+                        conn,
+                        f"SELECT itemID, {sort} AS sort_key FROM items WHERE itemID IN ({{ph}})",
+                        id_list,
+                    )
+                    pairs.sort(key=lambda r: r["sort_key"] or "", reverse=reverse)
+                    target_ids = [r["itemID"] for r in pairs[offset : offset + limit]]
             elif sort == "title":
                 title_field = conn.execute("SELECT fieldID FROM fields WHERE fieldName = 'title'").fetchone()
                 fid = title_field["fieldID"] if title_field else 4
-                rows = conn.execute(
-                    f"SELECT i.itemID FROM items i "
-                    f"LEFT JOIN itemData id_t ON i.itemID = id_t.itemID AND id_t.fieldID = ? "
-                    f"LEFT JOIN itemDataValues iv_t ON id_t.valueID = iv_t.valueID "
-                    f"WHERE i.itemID IN ({ph}) "
-                    f"ORDER BY COALESCE(iv_t.value, '') COLLATE NOCASE {dir_sql} LIMIT ? OFFSET ?",
-                    (fid, *id_list, limit, offset),
-                ).fetchall()
-                target_ids = [r["itemID"] for r in rows]
+                if len(id_list) <= _SORT_IN_THRESHOLD:
+                    ph = ",".join("?" * len(id_list))
+                    rows = conn.execute(
+                        f"SELECT i.itemID FROM items i "
+                        f"LEFT JOIN itemData id_t ON i.itemID = id_t.itemID AND id_t.fieldID = ? "
+                        f"LEFT JOIN itemDataValues iv_t ON id_t.valueID = iv_t.valueID "
+                        f"WHERE i.itemID IN ({ph}) "
+                        f"ORDER BY COALESCE(iv_t.value, '') COLLATE NOCASE {dir_sql} LIMIT ? OFFSET ?",
+                        (fid, *id_list, limit, offset),
+                    ).fetchall()
+                    target_ids = [r["itemID"] for r in rows]
+                else:
+                    pairs = self._batched_in_query(
+                        conn,
+                        "SELECT i.itemID, COALESCE(iv_t.value, '') AS sort_key FROM items i "
+                        "LEFT JOIN itemData id_t ON i.itemID = id_t.itemID AND id_t.fieldID = ? "
+                        "LEFT JOIN itemDataValues iv_t ON id_t.valueID = iv_t.valueID "
+                        "WHERE i.itemID IN ({ph})",
+                        id_list,
+                        (fid,),
+                    )
+                    pairs.sort(key=lambda r: _nocase_key(r["sort_key"]), reverse=reverse)
+                    target_ids = [r["itemID"] for r in pairs[offset : offset + limit]]
             elif sort == "creator":
-                rows = conn.execute(
-                    f"SELECT i.itemID FROM items i "
-                    f"LEFT JOIN itemCreators ic ON i.itemID = ic.itemID AND ic.orderIndex = 0 "
-                    f"LEFT JOIN creators c ON ic.creatorID = c.creatorID "
-                    f"WHERE i.itemID IN ({ph}) "
-                    f"ORDER BY COALESCE(c.lastName, '') COLLATE NOCASE {dir_sql} LIMIT ? OFFSET ?",
-                    (*id_list, limit, offset),
-                ).fetchall()
-                target_ids = [r["itemID"] for r in rows]
+                if len(id_list) <= _SORT_IN_THRESHOLD:
+                    ph = ",".join("?" * len(id_list))
+                    rows = conn.execute(
+                        f"SELECT i.itemID FROM items i "
+                        f"LEFT JOIN itemCreators ic ON i.itemID = ic.itemID AND ic.orderIndex = 0 "
+                        f"LEFT JOIN creators c ON ic.creatorID = c.creatorID "
+                        f"WHERE i.itemID IN ({ph}) "
+                        f"ORDER BY COALESCE(c.lastName, '') COLLATE NOCASE {dir_sql} LIMIT ? OFFSET ?",
+                        (*id_list, limit, offset),
+                    ).fetchall()
+                    target_ids = [r["itemID"] for r in rows]
+                else:
+                    pairs = self._batched_in_query(
+                        conn,
+                        "SELECT i.itemID, COALESCE(c.lastName, '') AS sort_key FROM items i "
+                        "LEFT JOIN itemCreators ic ON i.itemID = ic.itemID AND ic.orderIndex = 0 "
+                        "LEFT JOIN creators c ON ic.creatorID = c.creatorID "
+                        "WHERE i.itemID IN ({ph})",
+                        id_list,
+                    )
+                    pairs.sort(key=lambda r: _nocase_key(r["sort_key"]), reverse=reverse)
+                    target_ids = [r["itemID"] for r in pairs[offset : offset + limit]]
             else:
                 target_ids = sorted(item_ids)[offset : offset + limit]
         else:
@@ -446,14 +511,14 @@ class ZoteroReader:
 
         # --- DOI strategy ---
         if strategy in ("doi", "both"):
-            ph = ",".join("?" * len(item_ids))
-            doi_rows = conn.execute(
-                f"SELECT id.itemID, iv.value FROM itemData id "
-                f"JOIN fields f ON id.fieldID = f.fieldID "
-                f"JOIN itemDataValues iv ON id.valueID = iv.valueID "
-                f"WHERE f.fieldName = 'DOI' AND id.itemID IN ({ph}) AND iv.value != ''",
+            doi_rows = self._batched_in_query(
+                conn,
+                "SELECT id.itemID, iv.value FROM itemData id "
+                "JOIN fields f ON id.fieldID = f.fieldID "
+                "JOIN itemDataValues iv ON id.valueID = iv.valueID "
+                "WHERE f.fieldName = 'DOI' AND id.itemID IN ({ph}) AND iv.value != ''",
                 item_ids,
-            ).fetchall()
+            )
 
             doi_map: dict[str, list[int]] = {}
             for r in doi_rows:
@@ -472,14 +537,14 @@ class ZoteroReader:
 
         # --- Title strategy ---
         if strategy in ("title", "both"):
-            ph = ",".join("?" * len(item_ids))
-            title_rows = conn.execute(
-                f"SELECT id.itemID, iv.value FROM itemData id "
-                f"JOIN fields f ON id.fieldID = f.fieldID "
-                f"JOIN itemDataValues iv ON id.valueID = iv.valueID "
-                f"WHERE f.fieldName = 'title' AND id.itemID IN ({ph})",
+            title_rows = self._batched_in_query(
+                conn,
+                "SELECT id.itemID, iv.value FROM itemData id "
+                "JOIN fields f ON id.fieldID = f.fieldID "
+                "JOIN itemDataValues iv ON id.valueID = iv.valueID "
+                "WHERE f.fieldName = 'title' AND id.itemID IN ({ph})",
                 item_ids,
-            ).fetchall()
+            )
 
             def _normalize(title: str) -> str:
                 t = re.sub(r"[^\w\s]", "", title.lower()).strip()
@@ -916,25 +981,42 @@ class ZoteroReader:
 
     # --- Private helpers ---
 
+    @staticmethod
+    def _batched_in_query(
+        conn: sqlite3.Connection,
+        sql: str,
+        ids: list[int],
+        prefix_params: tuple[Any, ...] = (),
+    ) -> list[sqlite3.Row]:
+        """Run a query containing one ``IN ({ph})`` placeholder, batched over ``ids``.
+
+        SQLITE_MAX_VARIABLE_NUMBER can be as low as 999 on older SQLite builds,
+        so large id lists are split into batches. ``prefix_params`` bind before
+        each id batch.
+        """
+        out: list[sqlite3.Row] = []
+        for batch in _in_batches(ids):
+            ph = ",".join("?" * len(batch))
+            out.extend(conn.execute(sql.format(ph=ph), (*prefix_params, *batch)).fetchall())
+        return out
+
     def _get_items_batch(self, conn: sqlite3.Connection, item_ids: list[int]) -> list[Item]:
         """Resolve multiple item IDs to Items using bulk queries instead of N+1."""
         if not item_ids:
             return []
 
-        placeholders = ",".join("?" * len(item_ids))
-
         # Fetch base item rows
-        rows = conn.execute(
+        rows = self._batched_in_query(
+            conn,
             f"SELECT itemID, itemTypeID, key, dateAdded, dateModified "
-            f"FROM items WHERE itemID IN ({placeholders}) AND itemTypeID {self._get_excluded_sql()}",
+            f"FROM items WHERE itemID IN ({{ph}}) AND itemTypeID {self._get_excluded_sql()}",
             item_ids,
-        ).fetchall()
+        )
         if not rows:
             return []
 
         id_to_row = {r["itemID"]: r for r in rows}
         valid_ids = list(id_to_row.keys())
-        valid_ph = ",".join("?" * len(valid_ids))
 
         # Batch fetch item types
         type_ids = list({r["itemTypeID"] for r in rows})
@@ -946,26 +1028,28 @@ class ZoteroReader:
         type_map = {r["itemTypeID"]: r["typeName"] for r in type_rows}
 
         # Batch fetch fields
-        field_rows = conn.execute(
-            f"SELECT id.itemID, f.fieldName, iv.value FROM itemData id "
-            f"JOIN fields f ON id.fieldID = f.fieldID "
-            f"JOIN itemDataValues iv ON id.valueID = iv.valueID "
-            f"WHERE id.itemID IN ({valid_ph})",
+        field_rows = self._batched_in_query(
+            conn,
+            "SELECT id.itemID, f.fieldName, iv.value FROM itemData id "
+            "JOIN fields f ON id.fieldID = f.fieldID "
+            "JOIN itemDataValues iv ON id.valueID = iv.valueID "
+            "WHERE id.itemID IN ({ph})",
             valid_ids,
-        ).fetchall()
+        )
         fields_map: dict[int, dict[str, str]] = {}
         for r in field_rows:
             fields_map.setdefault(r["itemID"], {})[r["fieldName"]] = r["value"]
 
         # Batch fetch creators
-        creator_rows = conn.execute(
-            f"SELECT ic.itemID, c.firstName, c.lastName, ct.creatorType "
-            f"FROM itemCreators ic "
-            f"JOIN creators c ON ic.creatorID = c.creatorID "
-            f"JOIN creatorTypes ct ON ic.creatorTypeID = ct.creatorTypeID "
-            f"WHERE ic.itemID IN ({valid_ph}) ORDER BY ic.itemID, ic.orderIndex",
+        creator_rows = self._batched_in_query(
+            conn,
+            "SELECT ic.itemID, c.firstName, c.lastName, ct.creatorType "
+            "FROM itemCreators ic "
+            "JOIN creators c ON ic.creatorID = c.creatorID "
+            "JOIN creatorTypes ct ON ic.creatorTypeID = ct.creatorTypeID "
+            "WHERE ic.itemID IN ({ph}) ORDER BY ic.itemID, ic.orderIndex",
             valid_ids,
-        ).fetchall()
+        )
         creators_map: dict[int, list[Creator]] = {}
         for r in creator_rows:
             creators_map.setdefault(r["itemID"], []).append(
@@ -973,23 +1057,23 @@ class ZoteroReader:
             )
 
         # Batch fetch tags
-        tag_rows = conn.execute(
-            f"SELECT it.itemID, t.name FROM itemTags it "
-            f"JOIN tags t ON it.tagID = t.tagID "
-            f"WHERE it.itemID IN ({valid_ph})",
+        tag_rows = self._batched_in_query(
+            conn,
+            "SELECT it.itemID, t.name FROM itemTags it JOIN tags t ON it.tagID = t.tagID WHERE it.itemID IN ({ph})",
             valid_ids,
-        ).fetchall()
+        )
         tags_map: dict[int, list[str]] = {}
         for r in tag_rows:
             tags_map.setdefault(r["itemID"], []).append(r["name"])
 
         # Batch fetch collections
-        coll_rows = conn.execute(
-            f"SELECT ci.itemID, c.key FROM collectionItems ci "
-            f"JOIN collections c ON ci.collectionID = c.collectionID "
-            f"WHERE ci.itemID IN ({valid_ph})",
+        coll_rows = self._batched_in_query(
+            conn,
+            "SELECT ci.itemID, c.key FROM collectionItems ci "
+            "JOIN collections c ON ci.collectionID = c.collectionID "
+            "WHERE ci.itemID IN ({ph})",
             valid_ids,
-        ).fetchall()
+        )
         colls_map: dict[int, list[str]] = {}
         for r in coll_rows:
             colls_map.setdefault(r["itemID"], []).append(r["key"])

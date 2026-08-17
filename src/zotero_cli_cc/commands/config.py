@@ -215,7 +215,19 @@ def profile_set(name: str, config_path: str | None) -> None:
         )
     content = path.read_text()
     if "[default]" in content:
-        content = re.sub(r'(profile\s*=\s*)"[^"]*"', f'\\1"{name}"', content)
+        # Match both quote styles: save_config used to write single-quoted
+        # TOML literal strings, so a double-quote-only regex silently no-ops.
+        def _repl(m: re.Match[str]) -> str:
+            return f'{m.group(1)}"{name}"'
+
+        content, n = re.subn(
+            r"""(profile\s*=\s*)("[^"]*"|'[^']*')""",
+            _repl,
+            content,
+            count=1,
+        )
+        if n == 0:
+            content = content.replace("[default]", f'[default]\nprofile = "{name}"', 1)
     else:
         content = f'[default]\nprofile = "{name}"\n\n' + content
     path.write_text(content)

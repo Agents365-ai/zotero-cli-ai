@@ -462,11 +462,12 @@ def workspace_index(
         click.echo(f"Workspace '{name}' is empty. Add items first with: zot workspace add {name} KEY")
         return
 
-    # Reader and idx share one finally-cleanup below, so no `with` block here.
-    reader = open_reader(ctx)
-
     idx_path = workspaces_dir() / f"{name}.idx.sqlite"
     idx = RagIndex(idx_path)
+
+    # Reader and idx share one finally-cleanup below, so no `with` block here.
+    # Reader is opened last so a failure above cannot leak the SQLite connection.
+    reader = open_reader(ctx)
 
     try:
         if force:

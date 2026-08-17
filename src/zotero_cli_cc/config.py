@@ -181,9 +181,16 @@ def get_default_profile(path: Path | None = None) -> str:
     return str(data.get("default", {}).get("profile", ""))
 
 
+def _toml_str(value: str) -> str:
+    """Render value as a TOML basic string (escapes backslashes and quotes)."""
+    escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
 def save_config(config: AppConfig, path: Path | None = None) -> None:
     path = path or CONFIG_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(path.parent, 0o700)
 
     # Check if existing config uses profile-based structure
     existing_raw = ""
@@ -196,53 +203,55 @@ def save_config(config: AppConfig, path: Path | None = None) -> None:
     if has_profiles:
         lines = [
             "[default]",
-            "profile = 'default'",
+            'profile = "default"',
             "",
             "[profile.default]",
-            f"data_dir = '{config.data_dir}'",
-            f"library_id = '{config.library_id}'",
-            f"api_key = '{config.api_key}'",
+            f"data_dir = {_toml_str(config.data_dir)}",
+            f"library_id = {_toml_str(config.library_id)}",
+            f"api_key = {_toml_str(config.api_key)}",
         ]
         if config.semantic_scholar_api_key:
-            lines.append(f"semantic_scholar_api_key = '{config.semantic_scholar_api_key}'")
+            lines.append(f"semantic_scholar_api_key = {_toml_str(config.semantic_scholar_api_key)}")
         if config.prefs_js_path:
-            lines.append(f"prefs_js_path = '{config.prefs_js_path}'")
+            lines.append(f"prefs_js_path = {_toml_str(config.prefs_js_path)}")
         lines.extend(
             [
                 "",
                 "[output]",
-                f"default_format = '{config.default_format}'",
+                f"default_format = {_toml_str(config.default_format)}",
                 f"limit = {config.default_limit}",
                 "",
                 "[export]",
-                f"default_style = '{config.default_export_style}'",
+                f"default_style = {_toml_str(config.default_export_style)}",
                 "",
             ]
         )
     else:
         lines = [
             "[zotero]",
-            f"data_dir = '{config.data_dir}'",
-            f"library_id = '{config.library_id}'",
-            f"api_key = '{config.api_key}'",
+            f"data_dir = {_toml_str(config.data_dir)}",
+            f"library_id = {_toml_str(config.library_id)}",
+            f"api_key = {_toml_str(config.api_key)}",
         ]
         if config.semantic_scholar_api_key:
-            lines.append(f"semantic_scholar_api_key = '{config.semantic_scholar_api_key}'")
+            lines.append(f"semantic_scholar_api_key = {_toml_str(config.semantic_scholar_api_key)}")
         if config.prefs_js_path:
-            lines.append(f"prefs_js_path = '{config.prefs_js_path}'")
+            lines.append(f"prefs_js_path = {_toml_str(config.prefs_js_path)}")
         lines.extend(
             [
                 "",
                 "[output]",
-                f"default_format = '{config.default_format}'",
+                f"default_format = {_toml_str(config.default_format)}",
                 f"limit = {config.default_limit}",
                 "",
                 "[export]",
-                f"default_style = '{config.default_export_style}'",
+                f"default_style = {_toml_str(config.default_export_style)}",
                 "",
             ]
         )
     path.write_text("\n".join(lines))
+    # Config holds API keys — restrict to owner read/write
+    os.chmod(path, 0o600)
 
 
 def detect_zotero_data_dir(config: AppConfig) -> Path:

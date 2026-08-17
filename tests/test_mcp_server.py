@@ -922,9 +922,11 @@ class TestMcpWriteErrorHandling:
         result = _handle_tag_remove(["K1"], ["t1"])
         assert result["results"][0]["error"] == "Item not found"
 
-    def test_add_error(self):
+    @patch("zotero_cli_cc.core.metadata_resolver.resolve_doi")
+    def test_add_error(self, mock_resolve):
         from zotero_cli_cc.mcp_server import _handle_add
 
+        mock_resolve.return_value = None  # Crossref miss → bare item, no network
         self.writer.add_item.side_effect = self.ZoteroWriteError("API error: Bad request")
         result = _handle_add(doi="10.1234/test", url=None)
         assert result["error"] == "API error: Bad request"

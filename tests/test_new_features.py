@@ -317,8 +317,10 @@ class TestTimeout:
 
 
 class TestWriteErrorInCommands:
+    @patch("zotero_cli_cc.commands.add.resolve_doi")
     @patch("zotero_cli_cc.commands._helpers.ZoteroWriter")
-    def test_add_write_error(self, mock_writer_cls):
+    def test_add_write_error(self, mock_writer_cls, mock_resolve):
+        mock_resolve.return_value = None  # Crossref miss → bare item, no network
         mock_writer = MagicMock()
         mock_writer_cls.return_value = mock_writer
         mock_writer.add_item.side_effect = ZoteroWriteError("API error: Bad request")

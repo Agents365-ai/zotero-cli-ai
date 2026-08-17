@@ -89,7 +89,7 @@ def update_status_cmd(
 
     if not items:
         if json_out:
-            click.echo("[]")
+            click.echo(json.dumps(envelope_ok({"results": []}), indent=2, ensure_ascii=False))
         else:
             click.echo("No preprints found.")
         return
@@ -107,7 +107,7 @@ def update_status_cmd(
 
     if not preprint_items:
         if json_out:
-            click.echo("[]")
+            click.echo(json.dumps(envelope_ok({"results": []}), indent=2, ensure_ascii=False))
         else:
             click.echo("No items with preprint IDs found.")
         return
@@ -177,7 +177,8 @@ def update_status_cmd(
         client.close()
 
     if json_out:
-        click.echo(json.dumps(results, indent=2))
+        scan_env = envelope_ok({"published_count": published_count, "results": results})
+        click.echo(json.dumps(scan_env, indent=2, ensure_ascii=False))
         return
 
     click.echo()
@@ -238,7 +239,7 @@ def update_status_cmd(
         try:
             writer.update_item(r["key"], fields)
             updated += 1
-            click.echo(f"  Updated {r['key']}: {r['title'][:50]}...")
+            click.echo(f"  Updated {r['key']}: {r['title'][:50]}...", err=True)
         except ZoteroWriteError as e:
             click.echo(f"  Failed {r['key']}: {e}", err=True)
 
@@ -247,6 +248,7 @@ def update_status_cmd(
         store_cached(cache_scope, idempotency_key, env)
     if json_out:
         click.echo(json.dumps(env, indent=2, ensure_ascii=False))
-    click.echo(f"\nUpdated {updated} item(s).")
+    # Prose goes to stderr so stdout stays a parseable JSON envelope
+    click.echo(f"\nUpdated {updated} item(s).", err=True)
     if updated > 0:
-        click.echo(SYNC_REMINDER)
+        click.echo(SYNC_REMINDER, err=True)

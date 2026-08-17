@@ -57,9 +57,7 @@ def test_add_by_doi_resolver_404_falls_back(mock_writer_cls, mock_resolve):
     result = runner.invoke(main, ["add", "--doi", "10.1234/missing"], env=WRITE_ENV)
     assert result.exit_code == 0  # bare item is still created
     assert mock_writer.add_item.call_args.kwargs["extra_fields"] is None
-    assert "no record" in result.output.lower() or "no record" in result.stderr.lower() or True
-    # stderr capture is implementation-dependent in CliRunner; we just confirm
-    # the item was still created and the writer call did not receive metadata.
+    assert "no record" in result.stderr.lower()
 
 
 @patch("zotero_cli_cc.commands.add.resolve_doi")

@@ -109,3 +109,20 @@ def test_cache_list_json(tmp_path):
         assert data[0]["preview"] == "Short text."
     finally:
         pdf_cache_module.DEFAULT_CACHE_PATH = old_default
+
+
+def test_config_profile_set_single_quoted(tmp_path):
+    """`profile set` must rewrite single-quoted profile lines: older save_config
+    wrote TOML literal strings, and a double-quote-only regex silently no-ops."""
+    config_path = tmp_path / "config.toml"
+    config_path.write_text(
+        "[default]\nprofile = 'default'\n\n"
+        "[profile.default]\ndata_dir = '/tmp/z1'\nlibrary_id = '1'\napi_key = 'a'\n\n"
+        "[profile.work]\ndata_dir = '/tmp/z2'\nlibrary_id = '2'\napi_key = 'b'\n"
+    )
+    runner = CliRunner()
+    result = runner.invoke(main, ["config", "profile", "set", "work", "--config-path", str(config_path)])
+    assert result.exit_code == 0
+    content = config_path.read_text()
+    assert 'profile = "work"' in content
+    assert "profile = 'default'" not in content

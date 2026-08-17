@@ -1,5 +1,8 @@
+import stat
 import sys
 from pathlib import Path
+
+import pytest
 
 from zotero_cli_cc.config import (
     AppConfig,
@@ -214,3 +217,25 @@ def test_embedding_config_is_configured():
 
     assert EmbeddingConfig(url="http://x", api_key="k", model="m").is_configured is True
     assert EmbeddingConfig(url="http://x", api_key="", model="m").is_configured is False
+
+
+def test_save_and_reload_with_special_chars(tmp_path):
+    """Apostrophes, quotes and backslashes must not corrupt the generated TOML."""
+    config_path = tmp_path / "config.toml"
+    cfg = AppConfig(
+        data_dir="/Users/o'brien/Zotero Data",
+        library_id="123",
+        api_key='key"with\\escapes',
+    )
+    save_config(cfg, config_path)
+    loaded = load_config(config_path)
+    assert loaded.data_dir == "/Users/o'brien/Zotero Data"
+    assert loaded.api_key == 'key"with\\escapes'
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX permissions not applicable")
+def test_save_config_file_permissions(tmp_path):
+    """Config holds API keys — file must be owner read/write only."""
+    config_path = tmp_path / "config.toml"
+    save_config(AppConfig(api_key="secret"), config_path)
+    assert stat.S_IMODE(config_path.stat().st_mode) == 0o600
