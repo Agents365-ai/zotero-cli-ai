@@ -7,6 +7,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-08-17
+
 ### Changed
 
 - **The `workspace` concept is gone** — it lasted one release as a synonym for
