@@ -7,9 +7,9 @@ hide:
   <img src="../assets/banner_official.png" alt="zotero-cli-cc banner" width="720">
 </p>
 
-# zot — 让 Zotero 在终端中起飞
+# zot — 适配任意 AI Agent 的 Zotero 命令行工具
 
-`zotero-cli-cc` 是一个专为 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 设计的 Zotero CLI 工具。
+`zotero-cli-cc` 是一个适配任意 AI Agent 的 Zotero CLI 工具。
 
 **核心特性：**
 
@@ -17,7 +17,7 @@ hide:
 - **写入**：通过 Zotero Web API 安全写入 — Zotero 完全感知变更
 - **PDF**：从本地 PDF 存储中提取全文，支持自动缓存
 - **工作区**：按主题组织论文，内置 RAG 检索
-- **MCP**：45 个工具，支持 AI 编程助手（Claude Desktop、Cursor、LM Studio）
+- **MCP**：48 个工具，支持 AI 编程助手（Claude Desktop、Cursor、LM Studio）
 
 **无需启动 Zotero 桌面端即可搜索和阅读论文。**
 

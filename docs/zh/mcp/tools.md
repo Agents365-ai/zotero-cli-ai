@@ -1,6 +1,6 @@
 # MCP 工具参考
 
-共 45 个工具，按类别组织。所有工具均接受可选的 `library` 参数（默认：`"user"`）。群组文献库使用 `"group:<id>"`。
+共 48 个工具，按类别组织。所有工具均接受可选的 `library` 参数（默认：`"user"`）。群组文献库使用 `"group:<id>"`。
 
 ## 读取工具
 
@@ -11,6 +11,8 @@
 | `read` | 读取条目详情 + 笔记 | `key`, `detail?` |
 | `pdf` | 提取 PDF 文本 | `key`, `pages?` |
 | `annotations` | 提取 PDF 标注 | `key` |
+| `references` | 提取解析后的参考文献（需 GROBID 服务） | `key` |
+| `tables` | 提取 PDF 表格（pdfplumber） | `key` |
 | `summarize` | AI 结构化摘要 | `key` |
 | `summarize_all` | 导出所有条目摘要 | `limit` |
 | `export` | 导出引用 (bibtex/csl-json/ris) | `key`, `fmt?` |

@@ -201,7 +201,7 @@ def main(
     profile: str | None,
     library: str,
 ) -> None:
-    """zot — Zotero CLI for Claude Code.
+    """zot — Zotero CLI for any AI agent.
 
     \b
     Quick start:

@@ -27,7 +27,7 @@ context; open items are tracked here until they're promoted to GitHub Issues.
 - [x] `pipx` install instructions
 - [x] GitHub Releases with changelogs
 - [x] README badges: PyPI version, CI status, Python versions, License
-- [x] Expand MCP tools: workspace, cite, stats, update-status (45 tools total)
+- [x] Expand MCP tools: workspace, cite, stats, update-status (48 tools total)
 
 ## Open
 

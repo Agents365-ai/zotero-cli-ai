@@ -43,11 +43,12 @@ zot bridge status        # verify -> Bridge OK
 ### Manual
 
 1. Download the latest `zot-cli-bridge.xpi` from the
-   [Releases page](https://github.com/Agents365-ai/zotero-cli-cc/releases)
+   [Releases page](https://github.com/Agents365-ai/zotero-cli/releases)
    (or build it locally — see below).
 2. In Zotero: **Tools → Plugins → ⚙ → Install plugin from file…**, pick the
    `.xpi`, restart Zotero.
 3. Verify it's wired up:
+
    ```bash
    curl http://127.0.0.1:23119/zot-cli/ping
    # {"ok": true, "bridge_version": "0.4.0", "zotero_version": "9.x.y", ...}

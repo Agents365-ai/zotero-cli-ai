@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-45 tools organized by category. All tools accept an optional `library` parameter (default: `"user"`). For group libraries use `"group:<id>"`.
+48 tools organized by category. All tools accept an optional `library` parameter (default: `"user"`). For group libraries use `"group:<id>"`.
 
 ## Read Tools
 
@@ -11,6 +11,8 @@
 | `read` | Read item details + notes | `key`, `detail?` |
 | `pdf` | Extract PDF text | `key`, `pages?` |
 | `annotations` | Extract PDF annotations | `key` |
+| `references` | Extract parsed bibliography (needs GROBID service) | `key` |
+| `tables` | Extract tables from PDF (pdfplumber) | `key` |
 | `summarize` | Structured summary for AI | `key` |
 | `summarize_all` | Export all items as summaries | `limit` |
 | `export` | Export citation (bibtex/csl-json/ris) | `key`, `fmt?` |
