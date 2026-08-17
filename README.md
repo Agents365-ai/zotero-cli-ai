@@ -5,9 +5,9 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/zotero-cli-cc/"><img src="https://img.shields.io/pypi/v/zotero-cli-cc?color=blue" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/zotero-cli-ai/"><img src="https://img.shields.io/pypi/v/zotero-cli-ai?color=blue" alt="PyPI version"></a>
   <a href="https://github.com/Agents365-ai/zotero-cli/actions/workflows/ci.yml"><img src="https://github.com/Agents365-ai/zotero-cli/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://pypi.org/project/zotero-cli-cc/"><img src="https://img.shields.io/pypi/pyversions/zotero-cli-cc" alt="Python versions"></a>
+  <a href="https://pypi.org/project/zotero-cli-ai/"><img src="https://img.shields.io/pypi/pyversions/zotero-cli-ai" alt="Python versions"></a>
   <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/license-AGPL--3.0%20%2B%20Commercial-blue" alt="License"></a>
   <a href="https://agents365-ai.github.io/zotero-cli/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue" alt="Docs"></a>
 </p>
@@ -31,12 +31,12 @@
 ## Install
 
 ```bash
-uv tool install zotero-cli-cc      # recommended
-pipx install zotero-cli-cc         # or
-pip install zotero-cli-cc          # or
+uv tool install zotero-cli-ai      # recommended
+pipx install zotero-cli-ai         # or
+pip install zotero-cli-ai          # or
 ```
 
-> **Note:** the PyPI package is `zotero-cli-cc` (`zotero-cli` is an unrelated older project); the installed command is `zot`.
+> **Note:** the PyPI package is `zotero-cli-ai` (`zotero-cli` is an unrelated older project); the installed command is `zot`.
 
 ## 60-second quickstart
 

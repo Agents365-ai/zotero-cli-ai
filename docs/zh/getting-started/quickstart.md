@@ -43,7 +43,7 @@ zot --json search "single cell RNA"
 安装 zotero-cli skill，让 Claude Code 自动识别文献相关请求：
 
 ```bash
-cp -r skill/zotero-cli-cc ~/.claude/skills/
+cp -r skill/zotero-cli ~/.claude/skills/
 ```
 
 然后在任何 Claude Code 会话中使用自然语言：

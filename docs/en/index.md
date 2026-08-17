@@ -4,12 +4,12 @@ hide:
 ---
 
 <p align="center">
-  <img src="assets/banner_official.png" alt="zotero-cli-cc banner" width="720">
+  <img src="assets/banner_official.png" alt="zotero-cli banner" width="720">
 </p>
 
 # zot — A Zotero CLI for Any AI Agent
 
-`zotero-cli-cc` is a Zotero CLI for any AI agent.
+`zotero-cli` is a Zotero CLI for any AI agent.
 
 **Core Features:**
 

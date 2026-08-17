@@ -51,7 +51,7 @@ def bridge_source_dir() -> Path:
         return candidate
 
     raise BridgeInstallError(
-        "Cannot locate the bundled zot-cli-bridge plugin files. Reinstall zotero-cli-cc.",
+        "Cannot locate the bundled zot-cli-bridge plugin files. Reinstall zotero-cli-ai.",
         code="bridge_error",
     )
 
@@ -83,7 +83,7 @@ def build_xpi(dest: Path | None = None, source_dir: Path | None = None) -> Path:
     missing = [f for f in _PLUGIN_FILES if not (source_dir / f).exists()]
     if missing:
         raise BridgeInstallError(
-            f"Plugin assets incomplete (missing {', '.join(missing)}). Reinstall zotero-cli-cc.",
+            f"Plugin assets incomplete (missing {', '.join(missing)}). Reinstall zotero-cli-ai.",
             code="bridge_error",
         )
 

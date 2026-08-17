@@ -5,9 +5,9 @@
 </p>
 
 <p align="center">
-  <a href="https://pypi.org/project/zotero-cli-cc/"><img src="https://img.shields.io/pypi/v/zotero-cli-cc?color=blue" alt="PyPI version"></a>
+  <a href="https://pypi.org/project/zotero-cli-ai/"><img src="https://img.shields.io/pypi/v/zotero-cli-ai?color=blue" alt="PyPI version"></a>
   <a href="https://github.com/Agents365-ai/zotero-cli/actions/workflows/ci.yml"><img src="https://github.com/Agents365-ai/zotero-cli/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://pypi.org/project/zotero-cli-cc/"><img src="https://img.shields.io/pypi/pyversions/zotero-cli-cc" alt="Python versions"></a>
+  <a href="https://pypi.org/project/zotero-cli-ai/"><img src="https://img.shields.io/pypi/pyversions/zotero-cli-ai" alt="Python versions"></a>
   <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/license-AGPL--3.0%20%2B%20Commercial-blue" alt="License"></a>
   <a href="https://agents365-ai.github.io/zotero-cli/zh/"><img src="https://img.shields.io/badge/文档-GitHub%20Pages-blue" alt="文档"></a>
 </p>
@@ -31,12 +31,12 @@
 ## 安装
 
 ```bash
-uv tool install zotero-cli-cc      # 推荐
-pipx install zotero-cli-cc         # 或者
-pip install zotero-cli-cc          # 或者
+uv tool install zotero-cli-ai      # 推荐
+pipx install zotero-cli-ai         # 或者
+pip install zotero-cli-ai          # 或者
 ```
 
-> **注意：** PyPI 包名为 `zotero-cli-cc`（`zotero-cli` 是无关的早期项目），安装后的命令为 `zot`。
+> **注意：** PyPI 包名为 `zotero-cli-ai`（`zotero-cli` 是无关的早期项目），安装后的命令为 `zot`。
 
 ## 60 秒上手
 

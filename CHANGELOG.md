@@ -7,6 +7,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **PyPI distribution renamed** `zotero-cli-cc` → `zotero-cli-ai`. Install or
+  upgrade with `uv tool install zotero-cli-ai` (or `pipx`/`pip`). The `zot`
+  command, the `zotero_cli_cc` Python module, the Zotero bridge plugin ID, and
+  all config/cache paths are unchanged. `zotero-cli-cc` on PyPI receives no
+  further updates; `zotero-cli` is an unrelated older project.
+- Project branding unified as "zotero-cli — A Zotero CLI for Any AI Agent"
+  (was positioned as Claude Code-only).
+
 ## [0.10.0] - 2026-07-15
 
 ### Added

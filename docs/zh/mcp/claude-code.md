@@ -8,10 +8,10 @@
 
 ## 安装 Skill
 
-复制 zotero-cli-cc skill，让 Claude Code 自动识别文献相关请求：
+复制 zotero-cli skill，让 Claude Code 自动识别文献相关请求：
 
 ```bash
-cp -r skill/zotero-cli-cc ~/.claude/skills/
+cp -r skill/zotero-cli ~/.claude/skills/
 ```
 
 ## 工作原理

@@ -1,4 +1,4 @@
-"""Check PyPI for newer versions of zotero-cli-cc."""
+"""Check PyPI for newer versions of zotero-cli-ai."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from urllib.request import urlopen
 _CACHE_DIR = Path.home() / ".config" / "zot"
 _CACHE_FILE = _CACHE_DIR / ".version_check"
 _CHECK_INTERVAL = 86400  # 24 hours
-_PYPI_URL = "https://pypi.org/pypi/zotero-cli-cc/json"
+_PYPI_URL = "https://pypi.org/pypi/zotero-cli-ai/json"
 _TIMEOUT = 3  # seconds
 
 
@@ -28,10 +28,10 @@ def upgrade_command(executable: str | None = None) -> str:
     """
     exe = (executable if executable is not None else sys.executable).replace("\\", "/")
     if "/uv/tools/" in exe:
-        return "uv tool upgrade zotero-cli-cc"
+        return "uv tool upgrade zotero-cli-ai"
     if "/pipx/venvs/" in exe:
-        return "pipx upgrade zotero-cli-cc"
-    return "pip install -U zotero-cli-cc"
+        return "pipx upgrade zotero-cli-ai"
+    return "pip install -U zotero-cli-ai"
 
 
 def check_for_update(current_version: str) -> str | None:

@@ -1,5 +1,5 @@
 [project]
-name = "zotero-cli-cc"
+name = "zotero-cli-ai"
 version = "0.10.0"
 description = "Zotero CLI for any AI agent — SQLite reads + Web API writes"
 license = "AGPL-3.0-or-later"

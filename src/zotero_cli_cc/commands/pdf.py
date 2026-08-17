@@ -199,7 +199,7 @@ def pdf_cmd(
                     "runtime_error",
                     str(e),
                     output_json=json_out,
-                    hint="Install the pdfplumber extra: pip install 'zotero-cli-cc[pdfplumber]'",
+                    hint="Install the pdfplumber extra: pip install 'zotero-cli-ai[pdfplumber]'",
                     context="pdf",
                 )
             if not extracted:

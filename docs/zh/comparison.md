@@ -1,6 +1,6 @@
 # 同类工具对比
 
-| 特性 | **zotero-cli-cc** | [pyzotero-cli](https://github.com/chriscarrollsmith/pyzotero-cli) | [zotero-cli](https://github.com/jbaiter/zotero-cli) | [zotero-cli-tool](https://github.com/dhondta/zotero-cli) | [zotero-mcp](https://github.com/54yyyu/zotero-mcp) | [cookjohn/zotero-mcp](https://github.com/cookjohn/zotero-mcp) | [ZoteroBridge](https://github.com/Combjellyshen/ZoteroBridge) |
+| 特性 | **zotero-cli-ai** | [pyzotero-cli](https://github.com/chriscarrollsmith/pyzotero-cli) | [zotero-cli](https://github.com/jbaiter/zotero-cli) | [zotero-cli-tool](https://github.com/dhondta/zotero-cli) | [zotero-mcp](https://github.com/54yyyu/zotero-mcp) | [cookjohn/zotero-mcp](https://github.com/cookjohn/zotero-mcp) | [ZoteroBridge](https://github.com/Combjellyshen/ZoteroBridge) |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | **直读 SQLite** | **✅** | ❌ | ❌（仅缓存） | ❌ | ❌ | ❌（插件） | ✅ |
 | **离线读** | **✅** | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
@@ -23,7 +23,7 @@
 | **语言** | Python | Python | Python | Python | Python | TypeScript | TypeScript |
 | **活跃度** | ✅ 2026 | ✅ 2025 | ❌ 2024 | ✅ 2026 | ✅ 2026 | ✅ 2026 | ✅ 2026 |
 
-## 为什么选 zotero-cli-cc？
+## 为什么选 zotero-cli-ai？
 
 > **当前唯一仍在维护、直接读取 Zotero 本地 SQLite 的 Python CLI。**
 

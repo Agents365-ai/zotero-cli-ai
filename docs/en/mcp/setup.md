@@ -1,11 +1,11 @@
 # MCP Server Setup
 
-zotero-cli-cc supports [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) and can be used in MCP-compatible AI clients.
+zotero-cli-ai supports [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) and can be used in MCP-compatible AI clients.
 
 ## Install MCP Support
 
 ```bash
-pip install zotero-cli-cc[mcp]
+pip install zotero-cli-ai[mcp]
 ```
 
 ## Start the Server

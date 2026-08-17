@@ -115,7 +115,7 @@ class TestResolveDoi:
         called_url = mock_get.call_args[0][0]
         assert called_url == "https://api.crossref.org/works/10.1/x"
         headers = mock_get.call_args.kwargs["headers"]
-        assert "zotero-cli-cc" in headers["User-Agent"]
+        assert "zotero-cli-ai" in headers["User-Agent"]
 
     @patch("zotero_cli_cc.core.metadata_resolver.httpx.get")
     def test_404_returns_none(self, mock_get: MagicMock) -> None:

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-`zotero-cli-cc` (binary: `zot`) — a Zotero CLI built for Claude Code / agent use. It combines **direct local SQLite reads** with **Zotero Web API writes**, and exposes the same surface via an MCP server. The CLI follows an agent-native contract documented in `docs/agent-interface.md` (stable JSON envelope, typed exit codes, `zot schema` introspection, `--dry-run`, `--idempotency-key`, NDJSON streaming).
+`zotero-cli` (binary: `zot`; PyPI package: `zotero-cli-ai`) — a Zotero CLI for any AI agent. It combines **direct local SQLite reads** with **Zotero Web API writes**, and exposes the same surface via an MCP server. The CLI follows an agent-native contract documented in `docs/agent-interface.md` (stable JSON envelope, typed exit codes, `zot schema` introspection, `--dry-run`, `--idempotency-key`, NDJSON streaming).
 
 ## Common commands
 
@@ -65,7 +65,7 @@ This split is load-bearing for the project's value proposition. Preserve it when
 
 ### MCP server (`mcp_server.py`)
 
-Exposes the CLI functionality as MCP tools (`zot mcp serve`). When adding a new CLI command that should also be agent-callable via MCP clients, mirror it here. The MCP surface is optional (`pip install zotero-cli-cc[mcp]`).
+Exposes the CLI functionality as MCP tools (`zot mcp serve`). When adding a new CLI command that should also be agent-callable via MCP clients, mirror it here. The MCP surface is optional (`pip install zotero-cli-ai[mcp]`).
 
 ### Config & profiles
 
