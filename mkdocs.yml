@@ -1,7 +1,7 @@
 site_name: zot — Zotero CLI for Any AI Agent
-site_url: https://agents365-ai.github.io/zotero-cli
-repo_url: https://github.com/Agents365-ai/zotero-cli
-repo_name: Agents365-ai/zotero-cli
+site_url: https://agents365-ai.github.io/zotero-cli-ai
+repo_url: https://github.com/Agents365-ai/zotero-cli-ai
+repo_name: Agents365-ai/zotero-cli-ai
 
 theme:
   name: material

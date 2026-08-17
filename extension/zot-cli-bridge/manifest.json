@@ -4,7 +4,7 @@
   "version": "0.4.0",
   "description": "Exposes Zotero Find Full Text, attachment rename, and local file import over the local HTTP server for the zot CLI.",
   "author": "Agents365-ai",
-  "homepage_url": "https://github.com/Agents365-ai/zotero-cli",
+  "homepage_url": "https://github.com/Agents365-ai/zotero-cli-ai",
   "icons": {
     "48": "icon.png",
     "96": "icon.png"
@@ -12,7 +12,7 @@
   "applications": {
     "zotero": {
       "id": "zot-cli-bridge@zotero-cli-cc.org",
-      "update_url": "https://github.com/Agents365-ai/zotero-cli/releases/download/bridge/update.json",
+      "update_url": "https://github.com/Agents365-ai/zotero-cli-ai/releases/download/bridge/update.json",
       "strict_min_version": "7.999",
       "strict_max_version": "9.*"
     }

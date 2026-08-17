@@ -6,13 +6,13 @@
 
 <p align="center">
   <a href="https://pypi.org/project/zotero-cli-ai/"><img src="https://img.shields.io/pypi/v/zotero-cli-ai?color=blue" alt="PyPI version"></a>
-  <a href="https://github.com/Agents365-ai/zotero-cli/actions/workflows/ci.yml"><img src="https://github.com/Agents365-ai/zotero-cli/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Agents365-ai/zotero-cli-ai/actions/workflows/ci.yml"><img src="https://github.com/Agents365-ai/zotero-cli-ai/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://pypi.org/project/zotero-cli-ai/"><img src="https://img.shields.io/pypi/pyversions/zotero-cli-ai" alt="Python versions"></a>
   <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/license-AGPL--3.0%20%2B%20Commercial-blue" alt="License"></a>
-  <a href="https://agents365-ai.github.io/zotero-cli/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue" alt="Docs"></a>
+  <a href="https://agents365-ai.github.io/zotero-cli-ai/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue" alt="Docs"></a>
 </p>
 
-[中文](README_CN.md) | [Documentation](https://agents365-ai.github.io/zotero-cli/)
+[中文](README_CN.md) | [Documentation](https://agents365-ai.github.io/zotero-cli-ai/)
 
 `zotero-cli` is a Zotero CLI for any AI agent.
 
@@ -65,25 +65,25 @@ When stdout is not a TTY, `zot` automatically emits a stable JSON envelope so ag
 
 ## Documentation
 
-Full docs live at **<https://agents365-ai.github.io/zotero-cli/>**.
+Full docs live at **<https://agents365-ai.github.io/zotero-cli-ai/>**.
 
 | Topic | Link |
 | --- | --- |
-| Installation & setup | [Getting started](https://agents365-ai.github.io/zotero-cli/getting-started/installation/) |
-| Search, list, read | [Search guide](https://agents365-ai.github.io/zotero-cli/guide/search/) |
-| Notes, tags, citations | [Notes & tags](https://agents365-ai.github.io/zotero-cli/guide/notes-tags/), [Citations](https://agents365-ai.github.io/zotero-cli/guide/citations/) |
-| Add / update / delete items | [Item management](https://agents365-ai.github.io/zotero-cli/guide/item-management/) |
-| Collections | [Collections](https://agents365-ai.github.io/zotero-cli/guide/collections/) |
-| Workspaces + RAG | [Workspaces](https://agents365-ai.github.io/zotero-cli/guide/workspace/) |
-| PDF extraction | [PDF](https://agents365-ai.github.io/zotero-cli/guide/pdf/) |
-| Preprint → published | [update-status](https://agents365-ai.github.io/zotero-cli/guide/update-status/) |
-| MCP setup & tools | [MCP](https://agents365-ai.github.io/zotero-cli/mcp/setup/) |
-| Full CLI reference | [CLI reference](https://agents365-ai.github.io/zotero-cli/reference/cli/) |
+| Installation & setup | [Getting started](https://agents365-ai.github.io/zotero-cli-ai/getting-started/installation/) |
+| Search, list, read | [Search guide](https://agents365-ai.github.io/zotero-cli-ai/guide/search/) |
+| Notes, tags, citations | [Notes & tags](https://agents365-ai.github.io/zotero-cli-ai/guide/notes-tags/), [Citations](https://agents365-ai.github.io/zotero-cli-ai/guide/citations/) |
+| Add / update / delete items | [Item management](https://agents365-ai.github.io/zotero-cli-ai/guide/item-management/) |
+| Collections | [Collections](https://agents365-ai.github.io/zotero-cli-ai/guide/collections/) |
+| Workspaces + RAG | [Workspaces](https://agents365-ai.github.io/zotero-cli-ai/guide/workspace/) |
+| PDF extraction | [PDF](https://agents365-ai.github.io/zotero-cli-ai/guide/pdf/) |
+| Preprint → published | [update-status](https://agents365-ai.github.io/zotero-cli-ai/guide/update-status/) |
+| MCP setup & tools | [MCP](https://agents365-ai.github.io/zotero-cli-ai/mcp/setup/) |
+| Full CLI reference | [CLI reference](https://agents365-ai.github.io/zotero-cli-ai/reference/cli/) |
 | Agent contract (envelope, exit codes, schema) | [`docs/agent-interface.md`](docs/agent-interface.md) |
-| Comparison with similar tools | [Comparison](https://agents365-ai.github.io/zotero-cli/comparison/) |
+| Comparison with similar tools | [Comparison](https://agents365-ai.github.io/zotero-cli-ai/comparison/) |
 | Roadmap | [`ROADMAP.md`](ROADMAP.md) |
 
-**Why zotero-cli?** The only actively maintained Python CLI that reads Zotero's local SQLite database directly, with a clean read/write split: SQLite for fast offline reads, Web API for safe writes that Zotero stays aware of. See the [comparison page](https://agents365-ai.github.io/zotero-cli/comparison/) for a feature-by-feature breakdown against similar tools.
+**Why zotero-cli?** The only actively maintained Python CLI that reads Zotero's local SQLite database directly, with a clean read/write split: SQLite for fast offline reads, Web API for safe writes that Zotero stays aware of. See the [comparison page](https://agents365-ai.github.io/zotero-cli-ai/comparison/) for a feature-by-feature breakdown against similar tools.
 
 ## Support
 

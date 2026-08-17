@@ -22,7 +22,7 @@ import httpx
 
 CROSSREF_API_BASE = "https://api.crossref.org/works"
 REQUEST_TIMEOUT = 15.0
-USER_AGENT_BASE = "zotero-cli-ai (https://github.com/Agents365-ai/zotero-cli)"
+USER_AGENT_BASE = "zotero-cli-ai (https://github.com/Agents365-ai/zotero-cli-ai)"
 
 
 class MetadataResolveError(Exception):
