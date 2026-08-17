@@ -7,6 +7,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-08-17
+
 ### Changed
 
 - **A workspace is now just a Zotero collection** — `zot workspace query` and
