@@ -2269,7 +2269,7 @@ wheels = [
 ]
 
 [[package]]
-name = "zotero-cli-cc"
+name = "zotero-cli-ai"
 version = "0.10.0"
 source = { editable = "." }
 dependencies = [

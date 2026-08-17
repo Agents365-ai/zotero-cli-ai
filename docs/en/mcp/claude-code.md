@@ -9,10 +9,10 @@
 
 ## Install the Skill
 
-Copy the zotero-cli-cc skill so Claude Code automatically recognizes literature-related requests:
+Copy the zotero-cli skill so Claude Code automatically recognizes literature-related requests:
 
 ```bash
-cp -r skill/zotero-cli-cc ~/.claude/skills/
+cp -r skill/zotero-cli ~/.claude/skills/
 ```
 
 ## How It Works

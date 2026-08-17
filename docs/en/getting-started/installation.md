@@ -10,19 +10,19 @@
 === "uv (recommended)"
 
     ```bash
-    uv tool install zotero-cli-cc
+    uv tool install zotero-cli-ai
     ```
 
 === "pipx"
 
     ```bash
-    pipx install zotero-cli-cc
+    pipx install zotero-cli-ai
     ```
 
 === "pip"
 
     ```bash
-    pip install zotero-cli-cc
+    pip install zotero-cli-ai
     ```
 
 ## Upgrade
@@ -30,27 +30,27 @@
 === "uv"
 
     ```bash
-    uv tool upgrade zotero-cli-cc
+    uv tool upgrade zotero-cli-ai
     ```
 
 === "pipx"
 
     ```bash
-    pipx upgrade zotero-cli-cc
+    pipx upgrade zotero-cli-ai
     ```
 
 === "pip"
 
     ```bash
-    pip install -U zotero-cli-cc
+    pip install -U zotero-cli-ai
     ```
 
 ## MCP Support
 
-To use zotero-cli-cc as an MCP server (for Claude Desktop, Cursor, LM Studio):
+To use zotero-cli-ai as an MCP server (for Claude Desktop, Cursor, LM Studio):
 
 ```bash
-pip install zotero-cli-cc[mcp]
+pip install zotero-cli-ai[mcp]
 ```
 
 ## Verify Installation

@@ -1,10 +1,10 @@
-# Contributing to zotero-cli-cc
+# Contributing to zotero-cli
 
 Thanks for your interest in contributing!
 
 ## License of contributions
 
-zotero-cli-cc is **dual-licensed** under the GNU AGPL-3.0-or-later and a
+zotero-cli is **dual-licensed** under the GNU AGPL-3.0-or-later and a
 separate commercial license (see [LICENSE](LICENSE) and
 [LICENSE-COMMERCIAL](LICENSE-COMMERCIAL)).
 

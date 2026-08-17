@@ -4,12 +4,12 @@ hide:
 ---
 
 <p align="center">
-  <img src="../assets/banner_official.png" alt="zotero-cli-cc banner" width="720">
+  <img src="../assets/banner_official.png" alt="zotero-cli banner" width="720">
 </p>
 
 # zot — 适配任意 AI Agent 的 Zotero 命令行工具
 
-`zotero-cli-cc` 是一个适配任意 AI Agent 的 Zotero CLI 工具。
+`zotero-cli` 是一个适配任意 AI Agent 的 Zotero CLI 工具。
 
 **核心特性：**
 

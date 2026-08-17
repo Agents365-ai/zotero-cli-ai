@@ -34,7 +34,7 @@ def _import_pymupdf() -> Any:
     except ImportError as e:
         raise PdfExtractionError(
             "The 'pymupdf' extractor requires the optional dependency. "
-            "Install it with: pip install 'zotero-cli-cc[pymupdf]'"
+            "Install it with: pip install 'zotero-cli-ai[pymupdf]'"
         ) from e
     return pymupdf
 
@@ -105,7 +105,7 @@ class BasePdfExtractor(ABC):
         """
         raise PdfExtractionError(
             f"table extraction is not supported by the '{self.name()}' extractor; "
-            "use the 'pdfplumber' extractor (pip install 'zotero-cli-cc[pdfplumber]')"
+            "use the 'pdfplumber' extractor (pip install 'zotero-cli-ai[pdfplumber]')"
         )
 
 
@@ -295,7 +295,7 @@ def _import_pdfplumber() -> Any:
     except ImportError as e:
         raise PdfExtractionError(
             "The 'pdfplumber' extractor requires the optional dependency. "
-            "Install it with: pip install 'zotero-cli-cc[pdfplumber]'"
+            "Install it with: pip install 'zotero-cli-ai[pdfplumber]'"
         ) from e
     return pdfplumber
 

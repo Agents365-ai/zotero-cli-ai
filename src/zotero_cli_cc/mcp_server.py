@@ -288,7 +288,7 @@ def _handle_tables(key: str, library: str = "user") -> dict:
         return {
             "error": str(e),
             "context": "tables",
-            "hint": "Install the pdfplumber extra: pip install 'zotero-cli-cc[pdfplumber]'",
+            "hint": "Install the pdfplumber extra: pip install 'zotero-cli-ai[pdfplumber]'",
         }
     return {"key": key, "tables": tables, "total": len(tables)}
 

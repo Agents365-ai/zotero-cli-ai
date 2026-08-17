@@ -43,7 +43,7 @@ This is what Claude Code uses behind the scenes when you ask it about papers.
 Install the zotero-cli skill so Claude Code automatically recognizes literature-related requests:
 
 ```bash
-cp -r skill/zotero-cli-cc ~/.claude/skills/
+cp -r skill/zotero-cli ~/.claude/skills/
 ```
 
 Then in any Claude Code session, use natural language:
