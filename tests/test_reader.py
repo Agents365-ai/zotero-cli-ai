@@ -217,3 +217,73 @@ class TestRelatedItems:
     def test_no_relations(self, reader: ZoteroReader):
         related = reader.get_related_items("DEEP003")
         assert isinstance(related, list)
+
+
+class TestUriEncodedDbPaths:
+    def test_db_path_with_uri_special_chars(self, tmp_path: Path, test_db_path: Path):
+        """Paths containing '?', '#' or '%' must not corrupt the SQLite URI."""
+        import shutil
+        import sys
+
+        if sys.platform == "win32":
+            pytest.skip("'?' is not allowed in Windows filenames")
+        weird = tmp_path / "we?ir#d%dir"
+        weird.mkdir()
+        db = weird / "zotero.sqlite"
+        shutil.copy2(test_db_path, db)
+        with ZoteroReader(db) as r:
+            item = r.get_item("ATTN001")
+        assert item is not None
+        assert item.title == "Attention Is All You Need"
+
+
+class TestBatchedInQueries:
+    """Force tiny IN-clause batches and the Python-side sort fallback, and
+    verify results are identical to the default single-query paths."""
+
+    @pytest.mark.parametrize("sort", ["dateAdded", "dateModified", "title", "creator"])
+    def test_sorted_search_matches_unbatched(self, reader: ZoteroReader, monkeypatch, sort: str):
+        import zotero_cli_cc.core.reader as reader_mod
+
+        # Fixture matches two items with distinct sort keys — no tie ambiguity
+        baseline = reader.search("transformer", sort=sort, limit=100)
+        assert len(baseline.items) == 2
+
+        monkeypatch.setattr(reader_mod, "_IN_BATCH_SIZE", 1)
+        monkeypatch.setattr(reader_mod, "_SORT_IN_THRESHOLD", 0)
+        batched = reader.search("transformer", sort=sort, limit=100)
+
+        assert batched.total == baseline.total
+        assert [i.key for i in batched.items] == [i.key for i in baseline.items]
+
+    def test_item_type_filter_batched(self, reader: ZoteroReader, monkeypatch):
+        import zotero_cli_cc.core.reader as reader_mod
+
+        baseline = reader.search("transformer", item_type="journalArticle", limit=100)
+        monkeypatch.setattr(reader_mod, "_IN_BATCH_SIZE", 1)
+        batched = reader.search("transformer", item_type="journalArticle", limit=100)
+        assert [i.key for i in batched.items] == [i.key for i in baseline.items]
+
+    def test_find_duplicates_batched(self, reader: ZoteroReader, monkeypatch):
+        import zotero_cli_cc.core.reader as reader_mod
+
+        baseline = reader.find_duplicates()
+        monkeypatch.setattr(reader_mod, "_IN_BATCH_SIZE", 1)
+        batched = reader.find_duplicates()
+
+        def group_keys(groups):
+            return {frozenset(i.key for i in g.items) for g in groups}
+
+        assert group_keys(batched) == group_keys(baseline)
+
+    def test_in_batches_helper(self):
+        from zotero_cli_cc.core.reader import _in_batches
+
+        assert list(_in_batches([1, 2, 3, 4, 5], 2)) == [[1, 2], [3, 4], [5]]
+        assert list(_in_batches([], 3)) == []
+
+    def test_nocase_key_folds_ascii_only(self):
+        from zotero_cli_cc.core.reader import _nocase_key
+
+        assert _nocase_key("AbC-Z") == "abc-z"
+        assert _nocase_key("Äbc") == "Äbc"  # SQLite NOCASE folds ASCII only

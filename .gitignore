@@ -8,6 +8,10 @@ dist/
 build/
 .pytest_cache/
 .coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+*.log
 # Docs build output
 site/
 # Internal dev docs (plans, specs)

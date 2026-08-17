@@ -8,7 +8,7 @@ import click
 from zotero_cli_cc.commands._helpers import open_reader
 from zotero_cli_cc.core.pdf_extractor import PdfExtractionError, get_extractor
 from zotero_cli_cc.exit_codes import emit_error
-from zotero_cli_cc.formatter import format_pdf_annotations, format_pdf_text
+from zotero_cli_cc.formatter import envelope_ok, format_pdf_annotations, format_pdf_text
 
 
 def _parse_outline(markdown: str) -> list[tuple[int, str, int]]:
@@ -154,7 +154,7 @@ def pdf_cmd(
                 emit_error("runtime_error", str(e), output_json=json_out, context="pdf")
             if not annots:
                 if json_out:
-                    click.echo("[]")
+                    click.echo(format_pdf_annotations(annots, output_json=True))
                 else:
                     click.echo("No annotations found.")
                 return
@@ -174,10 +174,13 @@ def pdf_cmd(
                     context="pdf",
                 )
             if not refs:
-                click.echo("[]" if json_out else "No references found.")
+                if json_out:
+                    click.echo(json.dumps(envelope_ok({"key": key, "references": []}), ensure_ascii=False))
+                else:
+                    click.echo("No references found.")
                 return
             if json_out:
-                click.echo(json.dumps({"key": key, "references": refs}, ensure_ascii=False))
+                click.echo(json.dumps(envelope_ok({"key": key, "references": refs}), ensure_ascii=False))
             else:
                 lines = []
                 for i, r in enumerate(refs, 1):
@@ -200,10 +203,13 @@ def pdf_cmd(
                     context="pdf",
                 )
             if not extracted:
-                click.echo("[]" if json_out else "No tables found.")
+                if json_out:
+                    click.echo(json.dumps(envelope_ok({"key": key, "tables": []}), ensure_ascii=False))
+                else:
+                    click.echo("No tables found.")
                 return
             if json_out:
-                click.echo(json.dumps({"key": key, "tables": extracted}, ensure_ascii=False))
+                click.echo(json.dumps(envelope_ok({"key": key, "tables": extracted}), ensure_ascii=False))
             else:
                 blocks = []
                 for t in extracted:
@@ -268,7 +274,8 @@ def pdf_cmd(
                 outline_data = _parse_outline(text)
                 if not outline_data:
                     if json_out:
-                        click.echo(json.dumps({"key": key, "pages": pages, "outline": []}, ensure_ascii=False))
+                        empty = envelope_ok({"key": key, "pages": pages, "outline": []})
+                        click.echo(json.dumps(empty, ensure_ascii=False))
                     else:
                         click.echo("No headings found in document.")
                     return

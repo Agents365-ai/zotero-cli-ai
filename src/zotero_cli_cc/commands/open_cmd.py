@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 
@@ -14,7 +15,8 @@ def _open_path(path: str) -> None:
     if sys.platform == "darwin":
         subprocess.run(["open", path], check=True)
     elif sys.platform == "win32":
-        subprocess.run(["start", path], shell=True, check=True)
+        # os.startfile avoids cmd.exe metacharacter interpretation of the path
+        os.startfile(path)  # type: ignore[attr-defined]
     else:
         subprocess.run(["xdg-open", path], check=True)
 

@@ -4,6 +4,7 @@ import io
 import os
 import re
 import sys
+import tempfile
 import time
 import xml.etree.ElementTree as ET
 import zipfile
@@ -521,13 +522,18 @@ class MinerUExtractor(BasePdfExtractor):
             raw_md = zf.read("full.md").decode("utf-8", errors="replace")
         return _clean_markdown_images(raw_md)
 
-    def _split_pdf(self, pdf_path: Path, max_pages: int) -> list[Path]:
+    def _split_pdf(self, pdf_path: Path, max_pages: int, dest_dir: Path) -> list[Path]:
+        """Split a large PDF into ≤max_pages chunk files inside dest_dir.
+
+        Chunks must not be written next to the source PDF: the source lives in
+        Zotero storage, and a crash would leave litter that Zotero could sync.
+        """
         pymupdf = _import_pymupdf()
         doc = pymupdf.open(str(pdf_path))
         total_pages = len(doc)
         chunks: list[Path] = []
         for start in range(0, total_pages, max_pages):
-            chunk_path = pdf_path.with_suffix(f".chunk{start // max_pages}.pdf")
+            chunk_path = dest_dir / f"{pdf_path.stem}.chunk{start // max_pages}.pdf"
             chunk_doc = pymupdf.open()
             end = min(start + max_pages, total_pages)
             for page_num in range(start, end):
@@ -585,9 +591,9 @@ class MinerUExtractor(BasePdfExtractor):
         if total_pages > 200:
             if pages:
                 raise PdfExtractionError("Page range splitting not supported for PDFs >200 pages")
-            chunk_paths = self._split_pdf(pdf_path, 200)
-            total_chunks = len(chunk_paths)
-            try:
+            with tempfile.TemporaryDirectory(prefix="zot-mineru-") as tmp:
+                chunk_paths = self._split_pdf(pdf_path, 200, Path(tmp))
+                total_chunks = len(chunk_paths)
                 texts = []
                 for chunk_idx, chunk_path in enumerate(chunk_paths, 1):
                     # Wrap progress_callback to report chunk progress instead of per-chunk-internal progress
@@ -608,24 +614,19 @@ class MinerUExtractor(BasePdfExtractor):
                         wrapped_callback = None
                     texts.append(self._extract_single(chunk_path, wrapped_callback))
                 return "\n\n".join(texts)
-            finally:
-                for chunk_path in chunk_paths:
-                    chunk_path.unlink(missing_ok=True)
         else:
             if pages:
-                chunk_path = pdf_path.with_suffix(".pagetemp.pdf")
-                doc = pymupdf.open(str(pdf_path))
-                chunk_doc = pymupdf.open()
-                start, end = pages
-                for page_num in range(start - 1, min(end, total_pages)):
-                    chunk_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
-                chunk_doc.save(str(chunk_path))
-                chunk_doc.close()
-                doc.close()
-                try:
+                with tempfile.TemporaryDirectory(prefix="zot-mineru-") as tmp:
+                    chunk_path = Path(tmp) / f"{pdf_path.stem}.pagetemp.pdf"
+                    doc = pymupdf.open(str(pdf_path))
+                    chunk_doc = pymupdf.open()
+                    start, end = pages
+                    for page_num in range(start - 1, min(end, total_pages)):
+                        chunk_doc.insert_pdf(doc, from_page=page_num, to_page=page_num)
+                    chunk_doc.save(str(chunk_path))
+                    chunk_doc.close()
+                    doc.close()
                     return self._extract_single(chunk_path, progress_callback)
-                finally:
-                    chunk_path.unlink(missing_ok=True)
             else:
                 return self._extract_single(pdf_path, progress_callback)
 
@@ -636,7 +637,9 @@ class MinerUExtractor(BasePdfExtractor):
     ) -> dict[Path, str | Exception]:
         pymupdf = _import_pymupdf()
         results: dict[Path, str | Exception] = {}
-        temp_files: list[Path] = []
+        # Split chunks go to a private temp dir — never next to the source PDF
+        # in Zotero storage; cleaned up even if the batch raises mid-upload.
+        chunk_tmp = tempfile.TemporaryDirectory(prefix="zot-mineru-")
         original_to_chunks: dict[Path, list[Path]] = {}
         total_pages = 0
 
@@ -665,8 +668,7 @@ class MinerUExtractor(BasePdfExtractor):
             total_pages += page_count
 
             if page_count > 200:
-                chunk_paths = self._split_pdf(pdf_path, 200)
-                temp_files.extend(chunk_paths)
+                chunk_paths = self._split_pdf(pdf_path, 200, Path(chunk_tmp.name))
                 original_to_chunks[pdf_path] = chunk_paths
                 for chunk_path in chunk_paths:
                     file_name = chunk_path.name
@@ -731,8 +733,7 @@ class MinerUExtractor(BasePdfExtractor):
                 else:
                     results[orig_for_chunk] = PdfExtractionError(f"Unexpected state: {state}")
 
-        for temp_file in temp_files:
-            temp_file.unlink(missing_ok=True)
+        chunk_tmp.cleanup()
 
         return results
 

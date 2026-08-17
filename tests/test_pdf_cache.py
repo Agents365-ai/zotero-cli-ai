@@ -1,4 +1,4 @@
-import time
+import os
 
 import pytest
 
@@ -27,8 +27,10 @@ def test_cache_invalidation_on_mtime_change(cache, tmp_path):
     pdf = tmp_path / "test.pdf"
     pdf.write_bytes(b"fake pdf v1")
     cache.put(pdf, "v1 text")
-    time.sleep(0.05)
     pdf.write_bytes(b"fake pdf v2")
+    # Bump mtime deterministically instead of sleeping for the fs timestamp to tick
+    st = pdf.stat()
+    os.utime(pdf, (st.st_atime, st.st_mtime + 10))
     assert cache.get(pdf) is None
 
 
