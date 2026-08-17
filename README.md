@@ -18,9 +18,9 @@
 
 - **Reads** — direct local SQLite, zero-config, offline, millisecond response
 - **Writes** — safe via Zotero Web API, Zotero stays in sync
-- **PDF + RAG** — extract full text with caching; built-in BM25 (+ optional embedding) search over per-topic workspaces
+- **PDF + ranked search** — extract full text with caching; index-free ranked retrieval over the whole library or scoped to a collection
 - **Agent-native** — stable JSON envelope, typed exit codes, `zot schema`, `--dry-run`, `--idempotency-key`, NDJSON streaming
-- **MCP server** — exposes 48 tools to Claude Desktop / LM Studio / Cursor via `zot mcp serve`
+- **MCP server** — exposes 39 tools to Claude Desktop / LM Studio / Cursor via `zot mcp serve`
 
 ## Architecture
 
@@ -74,7 +74,7 @@ Full docs live at **<https://agents365-ai.github.io/zotero-cli-ai/>**.
 | Notes, tags, citations | [Notes & tags](https://agents365-ai.github.io/zotero-cli-ai/guide/notes-tags/), [Citations](https://agents365-ai.github.io/zotero-cli-ai/guide/citations/) |
 | Add / update / delete items | [Item management](https://agents365-ai.github.io/zotero-cli-ai/guide/item-management/) |
 | Collections | [Collections](https://agents365-ai.github.io/zotero-cli-ai/guide/collections/) |
-| Workspaces + RAG | [Workspaces](https://agents365-ai.github.io/zotero-cli-ai/guide/workspace/) |
+| Workspaces (collections) | [Workspaces](https://agents365-ai.github.io/zotero-cli-ai/guide/workspace/) |
 | PDF extraction | [PDF](https://agents365-ai.github.io/zotero-cli-ai/guide/pdf/) |
 | Preprint → published | [update-status](https://agents365-ai.github.io/zotero-cli-ai/guide/update-status/) |
 | MCP setup & tools | [MCP](https://agents365-ai.github.io/zotero-cli-ai/mcp/setup/) |

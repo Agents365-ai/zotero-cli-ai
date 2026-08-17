@@ -571,16 +571,16 @@ stdout:
 
 Agents tail stderr for liveness; stdout remains a single clean envelope.
 
-## Workspace RAG
+## Workspace query & ask
 
-Workspaces support hybrid BM25 + semantic search via embeddings:
+A workspace is a Zotero collection — there is no local workspace store and no
+index to build. Retrieval is index-free and runs live against Zotero's own
+full-text index, so results are always fresh:
 
 ```bash
-zot workspace index my-workspace           # BM25 only
-zot workspace index my-workspace --force  # rebuild index
-zot workspace query "reward hacking" --workspace my-workspace
-zot workspace query "reward hacking" --workspace my-workspace --mode hybrid
-zot workspace query "reward hacking" --workspace my-workspace --mode bm25
+zot workspace query "reward hacking"                           # whole library
+zot workspace query "reward hacking" --workspace my-project    # scope to a collection
+zot workspace query "reward hacking" --workspace my-project --top-k 10
 ```
 
 Query JSON output:
@@ -589,22 +589,56 @@ Query JSON output:
 {
   "ok": true,
   "data": {
-    "mode": "hybrid",
+    "query": "reward hacking",
+    "workspace": "my-project",
     "results": [
-      { "rank": 1, "score": 0.8942, "item_key": "ABC123", "source": "pdf", "content": "..." },
-      { "rank": 2, "score": 0.8123, "item_key": "DEF456", "source": "metadata", "content": "..." }
+      {
+        "rank": 1,
+        "score": 0.0328,
+        "scores": { "rrf": 0.0328, "fulltext": 4.5612, "metadata": 2.0 },
+        "item_key": "ABC123",
+        "title": "...",
+        "creators": ["..."],
+        "date": "2024",
+        "snippet": "..."
+      }
     ]
   },
   "meta": { "schema_version": "1.9.0", ... }
 }
 ```
 
-The `mode` field indicates what retrieval was used:
-- `bm25`: keyword search only
-- `semantic`: embedding similarity only
-- `hybrid`: reciprocal rank fusion of both
+`zot ask` uses the same ranked retrieval but returns a citation-keyed evidence
+pack instead of ranked items — zot never calls an LLM. The agent synthesizes
+the answer from `evidence`, following `answer_instructions`:
 
-When `--mode auto` is used (default), the system automatically selects `hybrid` if embeddings exist for the workspace, otherwise `bm25`.
+```bash
+zot ask "how does attention scale?"
+zot ask "what dataset was used?" --workspace papers --evidence-k 8
+```
+
+```json
+{
+  "ok": true,
+  "data": {
+    "question": "what dataset was used?",
+    "workspace": "papers",
+    "mode": "index-free",
+    "evidence": [
+      { "cite_key": "ABC123", "source": "metadata", "text": "Title: ...", "scores": { "rrf": 0.0328, "fulltext": 4.5612, "metadata": 2.0 } },
+      { "cite_key": "ABC123", "source": "pdf", "text": "...passage around the query terms...", "scores": { "rrf": 0.0328, "fulltext": 4.5612, "metadata": 2.0 } }
+    ],
+    "answer_instructions": "Answer the question using ONLY the evidence below. Cite each claim with its cite_key in parentheses, e.g. (ABCD1234). ..."
+  },
+  "meta": { "schema_version": "1.9.0", ... }
+}
+```
+
+Stage 1 scores items with idf-weighted term coverage from Zotero's full-text
+index tables, fused with metadata matching (title/abstract/creators/tags/notes)
+via reciprocal rank fusion. For `ask`, stage 2 additionally extracts PDF
+passages on the fly around the query terms (pdfium, cached). `--workspace`
+takes a collection name or key; omitting it searches the whole library.
 
 ## Auth delegation
 

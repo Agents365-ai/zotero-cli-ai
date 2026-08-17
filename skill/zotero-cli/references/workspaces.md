@@ -1,105 +1,96 @@
-# Workspaces & RAG
+# Workspaces
 
-Workspaces are local topic-based paper collections for organizing research. Each workspace stores item keys in a TOML file (`~/.config/zot/workspaces/<name>.toml`) — no Zotero API needed.
+A workspace is simply a Zotero collection. `zot` stores nothing locally — no
+workspace files, no index. Membership lives in Zotero and queries run live, so
+results are always fresh.
 
-## Workspace Management
+## Managing Workspaces
 
-```bash
-# Create
-zot workspace new llm-safety --description "LLM alignment and safety papers"
-
-# Add/remove items
-zot workspace add llm-safety KEY1 KEY2 KEY3
-zot workspace remove llm-safety KEY1
-
-# List and inspect
-zot workspace list
-zot --json workspace list
-zot workspace show llm-safety
-
-# Delete
-zot workspace delete llm-safety --yes
-```
-
-## Bulk Import
+Curate membership in the Zotero app (drag & drop items into a collection), or
+via the CLI:
 
 ```bash
-zot workspace import llm-safety --collection "Alignment"
-zot workspace import llm-safety --tag "safety"
-zot workspace import llm-safety --search "RLHF"
+zot --json collection list                       # find collection keys
+zot collection create "LLM Safety"
+zot collection move ITEMKEY COLLECTIONKEY
+zot --json collection items COLLECTIONKEY
+zot collection delete COLLECTIONKEY
 ```
 
-## Search Within Workspace
+Wherever `--workspace` is accepted, pass a collection name or key — nested
+collections resolve by name too.
 
-Metadata substring match (no index required):
+## Ranked Search: `zot workspace query`
 
 ```bash
-zot workspace search "reward" --workspace llm-safety
-zot --json workspace search "attention" --workspace llm-safety
+zot workspace query "reward hacking"                            # whole library
+zot workspace query "RLHF methods" --workspace "LLM Safety" --top-k 10
+zot --json workspace query "attention" --workspace "LLM Safety"
 ```
 
-## Export
-
-```bash
-zot workspace export llm-safety                       # Markdown (default)
-zot workspace export llm-safety --format json         # JSON
-zot workspace export llm-safety --format bibtex       # BibTeX
-```
-
-## RAG Index
-
-```bash
-zot workspace index llm-safety                          # Incremental index
-zot workspace index llm-safety --force                  # Full rebuild (slow — confirm with user first)
-zot workspace index llm-safety --skip-tag skip-index    # Skip PDFs carrying this tag (default: skip-index)
-```
-
-Attachments tagged `skip-index` are skipped by default. Use `--skip-tag` to
-change which tag(s) are excluded — useful for keeping huge or irrelevant PDFs
-out of the index. Tag a PDF `skip-index` in Zotero to exclude it.
-
-**Important**: Never `--force` rebuild without user confirmation. Incremental indexing is usually sufficient.
-
-## RAG Query
-
-```bash
-zot workspace query "reward hacking" --workspace llm-safety
-zot workspace query "RLHF methods" --workspace llm-safety --top-k 10
-zot --json workspace query "attention" --workspace llm-safety
-```
-
-### Retrieval Modes
-
-```bash
---mode bm25       # Keyword only (always available, zero deps)
---mode semantic   # Embeddings only (requires ZOT_EMBEDDING_URL + ZOT_EMBEDDING_KEY)
---mode hybrid     # BM25 + semantic fusion (auto-selected if embeddings available)
-```
-
-## Chunk Format
-
-RAG results return chunks structured as:
+`--workspace` is optional; omit it to search the whole library. JSON output:
 
 ```json
 {
-  "rank": 1,
-  "score": 0.0154,
-  "item_key": "B6TZ6TQX",
-  "source": "pdf",
-  "content": "[Title > Section Heading] chunk text..."
+  "query": "reward hacking",
+  "workspace": "LLM Safety",
+  "results": [
+    {
+      "rank": 1,
+      "score": 0.0154,
+      "scores": {"rrf": 0.0154, "fulltext": 3.21, "metadata": 2.0},
+      "item_key": "B6TZ6TQX",
+      "title": "...",
+      "creators": ["..."],
+      "date": "2024",
+      "snippet": "..."
+    }
+  ]
 }
 ```
 
-## Reading More Context from Chunks
+## Evidence Packs: `zot ask`
 
-When a chunk is incomplete, drill into the source:
+```bash
+zot ask "how does attention scale?"                             # whole library
+zot --json ask "what dataset was used?" --workspace papers --evidence-k 8
+```
+
+`--evidence-k` defaults to 12. Returns a citation-keyed evidence pack
+(`mode: "index-free"`): each entry has `cite_key` (Zotero item key), `source`
+(`metadata` or `pdf`), `text`, and `scores`, plus `answer_instructions`.
+`zot` never calls an LLM — the agent synthesizes a grounded answer from the
+evidence and cites by `cite_key`.
+
+## How Retrieval Works
+
+Index-free two-stage ranking — nothing to build or maintain:
+
+1. **Stage 1** scores items with idf-weighted term coverage from Zotero's own
+   full-text index tables (the same index the Zotero app builds), fused via
+   reciprocal rank fusion with metadata matching (title/abstract/creators/
+   tags/notes).
+2. **Stage 2** (`ask` only) extracts PDF passages on the fly around query
+   terms (cached), so evidence includes both metadata/abstract and full-text
+   passages.
+
+Because queries hit Zotero's live tables, newly added items show up as soon as
+Zotero indexes them — there is no stale index to rebuild.
+
+## Drilling Into Evidence
+
+When a snippet or passage is incomplete, pull more context from the source:
 
 ```bash
 zot --json pdf --outline ITEMKEY            # Get numbered section headings
 zot --json pdf --section N ITEMKEY          # Extract content under the N-th heading
 ```
 
-## Configuration
+## Migrating From Old Local Workspaces
 
-- BM25: always available, zero additional dependencies
-- Semantic search: set `ZOT_EMBEDDING_URL` and `ZOT_EMBEDDING_KEY` environment variables
+Earlier versions kept local workspaces under `~/.config/zot/workspaces/`
+(JSON membership files plus `*.idx.sqlite` RAG indexes) and required a
+`zot workspace index` step. Both are gone — that directory is no longer used
+and can be deleted. Recreate the same paper sets as Zotero collections (in the
+app, or with `zot collection create` + `zot collection move`), then query with
+`zot workspace query` / `zot ask --workspace <collection>`.

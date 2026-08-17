@@ -16,8 +16,8 @@ hide:
 - **Reads**: Direct local SQLite database access — zero config, offline, millisecond response
 - **Writes**: Safe writes through Zotero Web API — Zotero fully aware of changes
 - **PDF**: Extract full text from local PDF storage with automatic caching
-- **Workspace**: Organize papers by topic with local workspaces + built-in RAG search
-- **MCP**: 48 tools for AI coding assistants (Claude Desktop, Cursor, LM Studio)
+- **Workspace**: Ranked natural-language search over Zotero collections — index-free, always fresh
+- **MCP**: 39 tools for AI coding assistants (Claude Desktop, Cursor, LM Studio)
 
 **Search and read papers without launching Zotero desktop.**
 

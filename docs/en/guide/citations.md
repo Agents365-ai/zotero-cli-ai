@@ -28,10 +28,12 @@ The formatted citation is automatically copied to your clipboard.
 | **Nature** | Author, A. B. Title. *Journal* **Volume**, Pages (Year). |
 | **Vancouver** | Author AB. Title. Journal. Year;Volume(Issue):Pages. |
 
-## Batch Export via Workspace
+## Batch Export
 
-For exporting multiple papers at once, use [workspace export](workspace.md):
+`zot export` takes one item key at a time. To export every paper in a collection, loop over `zot collection items`:
 
 ```bash
-zot workspace export my-project --format bibtex
+zot --json collection items COLL_KEY | jq -r '.data[].key' | while read -r key; do
+  zot export "$key"
+done
 ```

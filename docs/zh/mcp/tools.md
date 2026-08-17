@@ -1,6 +1,6 @@
 # MCP 工具参考
 
-共 48 个工具，按类别组织。所有工具均接受可选的 `library` 参数（默认：`"user"`）。群组文献库使用 `"group:<id>"`。
+共 39 个工具，按类别组织。所有工具均接受可选的 `library` 参数（默认：`"user"`）。群组文献库使用 `"group:<id>"`。
 
 ## 读取工具
 
@@ -51,16 +51,9 @@
 
 ## 工作区工具
 
+工作区就是一个 Zotero 集合 —— 通过上面的 `collection_*` 工具或在 Zotero 应用中管理成员。检索是无索引的：无需构建索引，结果始终最新。
+
 | 工具 | 描述 | 关键参数 |
 |------|------|----------|
-| `workspace_new` | 创建工作区 | `name`, `description?` |
-| `workspace_delete` | 删除工作区 | `name` |
-| `workspace_add` | 添加条目到工作区 | `name`, `keys` |
-| `workspace_remove` | 移除条目 | `name`, `keys` |
-| `workspace_list` | 列出所有工作区 | — |
-| `workspace_show` | 显示工作区条目 | `name`, `limit?` |
-| `workspace_export` | 导出工作区 | `name`, `fmt?` |
-| `workspace_import` | 批量导入条目 | `name`, `collection?`, `tag?`, `search_query?` |
-| `workspace_search` | 工作区内搜索 | `name`, `query`, `limit?` |
-| `workspace_index` | 构建 RAG 索引 | `name`, `force?` |
-| `workspace_query` | 自然语言查询 | `name`, `question`, `top_k?`, `mode?` |
+| `workspace_query` | 按与问题的相关度对论文排序（返回带片段的排序条目） | `question`, `workspace?`, `top_k?` |
+| `ask` | 带引用键的证据包（元数据 + PDF 片段）及作答指引；由 Agent 综合答案 —— zot 不调用 LLM | `question`, `workspace?`, `evidence_k?` |

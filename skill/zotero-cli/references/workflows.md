@@ -19,21 +19,18 @@ zot --json pdf K853PGUG                       # Full text (only if short or nece
 
 **No PDF attached?** If `zot pdf` reports no attachment, run `zot find-pdf K853PGUG` to have Zotero desktop fetch and attach one (requires the bridge — see `references/commands.md`).
 
-## Pattern 2: Deep Content Search via Workspace RAG
+## Pattern 2: Deep Content Search in a Collection
 
 ```bash
-# Step 1: Create workspace and populate
-zot workspace new drug-resistance --description "Cancer drug resistance mechanisms"
+# Step 1: Curate a collection (drag & drop in the Zotero app, or CLI)
+zot collection create "drug-resistance"
 zot --json search "drug resistance cancer" --limit 20
-zot workspace add drug-resistance KEY1 KEY2 KEY3
+zot collection move ITEMKEY COLLECTIONKEY       # repeat per item
 
-# Step 2: Build index
-zot workspace index drug-resistance
-
-# Step 3: Query
+# Step 2: Ranked query — no index step, always fresh
 zot --json workspace query "mechanisms of acquired resistance" --workspace drug-resistance --top-k 5
 
-# Step 4: Drill into specific chunks for more context
+# Step 3: Drill into specific items for more context
 zot --json pdf --outline ITEMKEY
 zot --json pdf --section N ITEMKEY
 ```
@@ -84,13 +81,13 @@ zot collection move ITEMKEY COLLECTIONKEY
 # 1. Import papers from DOI list
 zot add --from-file dois.txt
 
-# 2. Organize into workspace
-zot workspace new lit-review --description "Systematic review papers"
-zot workspace import lit-review --tag "review-candidate"
+# 2. Organize into a collection (or drag & drop in the Zotero app)
+zot collection create "lit-review"
+zot collection move ITEMKEY COLLECTIONKEY
 
-# 3. Build index for deep search
-zot workspace index lit-review
-
-# 4. Query for themes
+# 3. Query for themes — runs live, no index to build
 zot --json workspace query "methodology comparison" --workspace lit-review --top-k 10
+
+# 4. Or get a citation-keyed evidence pack for a grounded answer
+zot --json ask "which methodologies are compared?" --workspace lit-review
 ```

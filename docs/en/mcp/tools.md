@@ -1,6 +1,6 @@
 # MCP Tools Reference
 
-48 tools organized by category. All tools accept an optional `library` parameter (default: `"user"`). For group libraries use `"group:<id>"`.
+39 tools organized by category. All tools accept an optional `library` parameter (default: `"user"`). For group libraries use `"group:<id>"`.
 
 ## Read Tools
 
@@ -51,16 +51,9 @@
 
 ## Workspace Tools
 
+A workspace is a Zotero collection — manage membership with the `collection_*` tools above or in the Zotero app. Retrieval is index-free: there is no index to build and results are always fresh.
+
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `workspace_new` | Create workspace | `name`, `description?` |
-| `workspace_delete` | Delete workspace | `name` |
-| `workspace_add` | Add items to workspace | `name`, `keys` |
-| `workspace_remove` | Remove items | `name`, `keys` |
-| `workspace_list` | List all workspaces | — |
-| `workspace_show` | Show workspace items | `name`, `limit?` |
-| `workspace_export` | Export workspace | `name`, `fmt?` |
-| `workspace_import` | Bulk import items | `name`, `collection?`, `tag?`, `search_query?` |
-| `workspace_search` | Search within workspace | `name`, `query`, `limit?` |
-| `workspace_index` | Build RAG index | `name`, `force?` |
-| `workspace_query` | Query with natural language | `name`, `question`, `top_k?`, `mode?` |
+| `workspace_query` | Rank papers by relevance to a question (returns ranked items with snippets) | `question`, `workspace?`, `top_k?` |
+| `ask` | Citation-keyed evidence pack (metadata + PDF passages) plus answer instructions; the agent synthesizes the answer — zot never calls an LLM | `question`, `workspace?`, `evidence_k?` |

@@ -60,4 +60,4 @@ Show me details of this paper
 
 - [User Guide](../guide/search.md) — Full command reference
 - [MCP Server](../mcp/setup.md) — Use with Claude Desktop, Cursor, LM Studio
-- [Workspaces](../guide/workspace.md) — Organize papers by topic with RAG search
+- [Workspaces](../guide/workspace.md) — Ranked natural-language search over your collections, no index to build

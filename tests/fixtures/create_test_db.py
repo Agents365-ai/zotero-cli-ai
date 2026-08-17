@@ -86,6 +86,15 @@ def create_test_db() -> None:
 
         CREATE TABLE fulltextItemWords (wordID INT NOT NULL, itemID INT NOT NULL, PRIMARY KEY (wordID, itemID));
         CREATE TABLE fulltextWords (wordID INTEGER PRIMARY KEY, word TEXT NOT NULL UNIQUE);
+        CREATE TABLE fulltextItems (
+            itemID INTEGER PRIMARY KEY,
+            indexedPages INT,
+            totalPages INT,
+            indexedChars INT,
+            totalChars INT,
+            version INT,
+            synced INT
+        );
 
         CREATE TABLE deletedItems (
             itemID INTEGER PRIMARY KEY,
@@ -187,6 +196,7 @@ def create_test_db() -> None:
     c.execute("INSERT INTO fulltextItemWords VALUES (1, 5)")  # attachment itemID
     c.execute("INSERT INTO fulltextItemWords VALUES (2, 5)")
     c.execute("INSERT INTO fulltextItemWords VALUES (3, 5)")
+    c.execute("INSERT INTO fulltextItems VALUES (5, 10, 10, 5000, 5000, 1, 0)")
 
     # Item 7: Trashed item "Old Survey Paper"
     c.execute("INSERT INTO items VALUES (7, 2, '2023-06-01', '2023-06-02', '2023-06-02', 1, 'TRSH007')")
@@ -219,6 +229,7 @@ def create_test_db() -> None:
     c.execute("INSERT INTO itemAttachments VALUES (10, 9, 0, 'application/pdf', NULL, 'storage:protein.pdf')")
     c.execute("INSERT INTO fulltextWords VALUES (4, 'protein')")
     c.execute("INSERT INTO fulltextItemWords VALUES (4, 10)")  # group attachment
+    c.execute("INSERT INTO fulltextItems VALUES (10, 8, 8, 4000, 4000, 1, 0)")
 
     # Group collection
     c.execute("INSERT INTO collections VALUES (3, 'Group Papers', NULL, 2, 'GRPCOL03')")

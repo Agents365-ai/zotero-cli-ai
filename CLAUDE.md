@@ -23,7 +23,7 @@ uv run pytest tests/ -v
 # Run a single test / file / node
 uv run pytest tests/test_reader.py -v
 uv run pytest tests/test_reader.py::test_name -v
-uv run pytest -k "search and not rag" -v
+uv run pytest -k "search and not pdf" -v
 
 # Run the CLI from source
 uv run zot search "foo"
@@ -56,9 +56,8 @@ This split is load-bearing for the project's value proposition. Preserve it when
 
 - `reader.py` — SQLite read layer (search, list, read, collections, tags, attachments metadata).
 - `writer.py` — pyzotero-backed writes (add, update, delete, note, tag mutations, attachment upload).
-- `pdf_extractor.py` + `pdf_cache.py` — pluggable extraction backends (`pdfium` default — permissive BSD/Apache; `pymupdf` opt-in via the `[pymupdf]` extra for annotations/highlights + better markdown; `mineru` opt-in with auto-fallback to `pdfium`) with on-disk cache keyed per-extractor; feeds `zot pdf`, `summarize`, and the workspace RAG indexer. pymupdf is lazy-imported so the base install ships no AGPL code.
-- `workspace.py` — local-only TOML-backed workspaces at `~/.config/zot/workspaces/<name>.toml` (no API key, no Zotero sync). Workspaces are lightweight cross-cutting groupings, distinct from Zotero collections.
-- `rag.py` + `rag_index.py` — BM25 index over workspace metadata + PDF text, with optional embedding-based hybrid retrieval. The embedding layer is provider-routed (`core/embedding_router.py`) — choose via `[embedding] provider` (jina/aliyun/openai — the last covers any OpenAI-compatible `/v1/embeddings` endpoint) plus `ZOT_EMBEDDING_URL` / `ZOT_EMBEDDING_KEY`.
+- `pdf_extractor.py` + `pdf_cache.py` — pluggable extraction backends (`pdfium` default — permissive BSD/Apache; `pymupdf` opt-in via the `[pymupdf]` extra for annotations/highlights + better markdown; `mineru` opt-in with auto-fallback to `pdfium`) with on-disk cache keyed per-extractor; feeds `zot pdf`, `summarize`, and the on-the-fly passage extraction in `rank.py`. pymupdf is lazy-imported so the base install ships no AGPL code.
+- `rank.py` — index-free two-stage ranked retrieval behind `zot workspace query` and `zot ask`. Stage 1 scores items with idf-weighted term coverage from Zotero's own `fulltextWords`/`fulltextItemWords` tables (length-normalised via `fulltextItems.indexedChars`), fused with metadata LIKE matching via reciprocal rank fusion; stage 2 (`ask`) re-ranks top items by real term frequency from cached on-the-fly PDF extraction and carves evidence passages. A workspace is simply a Zotero collection (managed in the app or via `zot collection *`) — zot stores nothing locally and there is no index to build.
 - `idempotency.py` — supports `--idempotency-key` on mutating commands so agent retries are safe.
 - `semantic_scholar.py` — drives `zot update-status` (preprint → published detection).
 - `version_check.py` — PyPI version nudge.

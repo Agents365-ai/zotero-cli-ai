@@ -1,92 +1,92 @@
 # 工作区
 
-## 为什么需要工作区？
+工作区就是一个 Zotero 集合。zot 内部无需创建任何东西，也不在本地存储数据 —— 在 Zotero 应用（或通过 `zot collection *`）中维护集合成员，zot 实时查询。没有需要构建的索引，结果始终是最新的。
 
-Zotero 集合适合永久的文献组织，但科研工作经常需要临时的、跨类别的分组 -- "ICML 投稿的所有论文"、"组会要讨论的论文"或"第三章的参考文献"。
+## 管理成员
 
-工作区填补了这一空白：轻量级的本地视图，不会修改你的 Zotero 文献库。每个工作区是一个 TOML 文件，位于 `~/.config/zot/workspaces/<name>.toml`。无需 API 密钥，没有同步副作用。
-
-## 创建工作区
+在 Zotero 应用中整理论文，或使用 CLI：
 
 ```bash
-zot workspace new llm-safety --description "LLM alignment papers"
+zot collection list                        # 所有集合（名称 + 键）
+zot collection items COLL_KEY              # 集合中的条目
+zot collection create "LLM Safety"         # 创建集合（需要 API 密钥）
+zot collection move ITEM_KEY COLL_KEY      # 将条目移入集合
+zot collection rename COLL_KEY "New Name"  # 重命名
+zot collection delete COLL_KEY             # 删除集合
+zot collection reorganize plan.json        # 按 JSON 计划批量创建 + 移动
 ```
 
-名称必须使用 kebab-case（如 `llm-safety`、`protein-folding`）。
+## 排序检索
 
-## 添加条目
+`zot workspace query` 按与自然语言问题的相关度对论文排序：
 
 ```bash
-zot workspace add llm-safety ABC123 DEF456 GHI789
+zot workspace query "reward hacking methods"
+zot workspace query "reward hacking methods" --workspace "LLM Safety"
+zot workspace query "tumour immunity" --workspace "CR | HCC" --top-k 10
 ```
 
-## 批量导入
+- `--workspace` 将检索限定在某个集合（名称或键）内。省略则检索整个文献库。
+- `--top-k` 设置返回结果数量（默认：5）。
+
+检索是无索引的：条目评分来自 Zotero 自己的全文索引表（与 Zotero 应用构建的是同一个索引）中的 idf 加权词项覆盖度，并通过倒数排名融合（RRF）与元数据匹配（标题/摘要/作者/标签/笔记）合并。刚加入集合的论文立刻就能被搜到。
+
+JSON 输出：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "query": "reward hacking methods",
+    "workspace": "LLM Safety",
+    "results": [
+      {
+        "rank": 1,
+        "score": 0.0328,
+        "scores": { "rrf": 0.0328, "fulltext": 4.5612, "metadata": 2.0 },
+        "item_key": "ABC123",
+        "title": "...",
+        "creators": ["..."],
+        "date": "2024",
+        "snippet": "..."
+      }
+    ]
+  }
+}
+```
+
+## 证据包
+
+`zot ask` 更进一步：排序之后，它会围绕查询词即时提取 PDF 片段（pdfium，带缓存），返回带引用键的证据包。zot 本身不调用 LLM —— 由调用的 Agent 基于证据综合出有依据的答案。
 
 ```bash
-zot workspace import llm-safety --collection "Alignment"
-zot workspace import llm-safety --tag "safety"
-zot workspace import llm-safety --search "RLHF"
+zot ask "how does attention scale?"
+zot ask "what dataset was used?" --workspace papers --evidence-k 8
 ```
 
-## 浏览
+- `--workspace` 将检索限定在某个集合（名称或键）内。省略则检索整个文献库。
+- `--evidence-k` 设置证据条目数量（默认：12）。
 
-```bash
-zot workspace list                          # 所有工作区
-zot workspace show llm-safety               # 查看条目及元数据
-zot workspace search "reward" --workspace llm-safety
+JSON 输出：
+
+```json
+{
+  "ok": true,
+  "data": {
+    "question": "what dataset was used?",
+    "workspace": "papers",
+    "mode": "index-free",
+    "evidence": [
+      { "cite_key": "ABC123", "source": "metadata", "text": "Title: ...", "scores": { "rrf": 0.0328, "fulltext": 4.5612, "metadata": 2.0 } },
+      { "cite_key": "ABC123", "source": "pdf", "text": "...围绕查询词的片段...", "scores": { "rrf": 0.0328, "fulltext": 4.5612, "metadata": 2.0 } }
+    ],
+    "answer_instructions": "Answer the question using ONLY the evidence below. Cite each claim with its cite_key in parentheses, e.g. (ABCD1234). ..."
+  }
+}
 ```
 
-## 导出
+## 从旧版本迁移
 
-```bash
-zot workspace export llm-safety                       # Markdown
-zot workspace export llm-safety --format json         # JSON
-zot workspace export llm-safety --format bibtex       # BibTeX
-```
+早期版本在 `~/.config/zot/workspaces/` 下保存本地工作区（JSON 文件加 `*.idx.sqlite` BM25/embedding 索引），并提供独立的子命令（`workspace new/add/remove/list/show/export/import/search/index/delete`）以及可选的 embedding 提供商（`config.toml` 中的 `[embedding]` 配置段、`ZOT_EMBEDDING_*` 环境变量）。这些已全部移除 —— 旧文件不再使用，可以删除。
 
-## RAG 检索
-
-为工作区论文构建索引，支持自然语言查询：
-
-### 构建索引
-
-```bash
-zot workspace index llm-safety
-```
-
-索引元数据 + PDF 全文，使用 BM25 算法。
-
-### 查询
-
-```bash
-zot workspace query "reward hacking methods" --workspace llm-safety
-```
-
-返回索引论文中的排序文本片段。
-
-### 语义搜索（可选）
-
-配置 Embedding 端点以启用混合 BM25 + 向量检索：
-
-```bash
-export ZOT_EMBEDDING_URL="https://api.jina.ai/v1/embeddings"
-export ZOT_EMBEDDING_KEY="your-jina-key"   # 1000 万免费 token
-zot workspace index llm-safety --force      # 重建索引（含 embeddings）
-zot workspace query "reward hacking" --workspace llm-safety --mode hybrid
-```
-
-也支持任意 OpenAI 兼容的 `/v1/embeddings` 端点（阿里云百炼工作空间专属地址、LiteLLM、Ollama、vLLM 等）：
-
-```bash
-export ZOT_EMBEDDING_PROVIDER="openai"
-export ZOT_EMBEDDING_URL="https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
-export ZOT_EMBEDDING_KEY="your-key"
-export ZOT_EMBEDDING_MODEL="text-embedding-v3"
-```
-
-## 管理
-
-```bash
-zot workspace remove llm-safety ABC123      # 移除条目
-zot workspace delete llm-safety --yes       # 删除工作区
-```
+迁移方法：把原来的论文集合重建为 Zotero 集合（在应用中操作，或用 `zot collection create` + `zot collection move`），然后按上文使用 `zot workspace query` / `zot ask`，无需任何索引步骤。

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import atexit
 import logging
-import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -14,23 +13,14 @@ from zotero_cli_cc.config import (
     get_data_dir,
     get_prefs_js_path,
     load_config,
-    load_embedding_config,
     load_pdf_config,
 )
 from zotero_cli_cc.core.pdf_cache import PdfCache
 from zotero_cli_cc.core.pdf_extractor import PdfExtractionError, get_extractor
+from zotero_cli_cc.core.rank import build_ask_evidence, make_snippet, rank, resolve_collection_key
 from zotero_cli_cc.core.reader import ZoteroReader
-from zotero_cli_cc.core.workspace import (
-    Workspace,
-    delete_workspace,
-    list_workspaces,
-    load_workspace,
-    save_workspace,
-    validate_name,
-    workspace_exists,
-    workspaces_dir,
-)
 from zotero_cli_cc.core.writer import ZoteroWriteError, ZoteroWriter
+from zotero_cli_cc.formatter import ANSWER_INSTRUCTIONS
 from zotero_cli_cc.models import Collection, Item, Note
 
 mcp = FastMCP("zotero", instructions="Read and write access to a local Zotero library")
@@ -350,7 +340,7 @@ def _handle_relate(key: str, limit: int, library: str = "user") -> dict:
 
 
 def _handle_recent(days: int, modified: bool, limit: int, library: str = "user") -> dict:
-    from datetime import datetime, timedelta, timezone
+    from datetime import timedelta
 
     reader = _get_reader(library)
     sort_field = "dateModified" if modified else "dateAdded"
@@ -705,403 +695,53 @@ def _handle_add_from_pdf(file_path: str, doi_override: str | None = None, librar
 
 
 # ---------------------------------------------------------------------------
-# Workspace handler functions
+# Workspace / ask handlers (index-free, collection-backed)
 # ---------------------------------------------------------------------------
 
 
-def _handle_workspace_new(name: str, description: str = "") -> dict:
-    if not validate_name(name):
-        return {"error": f"Invalid workspace name: '{name}'. Use kebab-case (e.g., llm-safety)."}
-    if workspace_exists(name):
-        return {"error": f"Workspace '{name}' already exists."}
-    ws = Workspace(name=name, created=datetime.now(timezone.utc).isoformat(), description=description)
-    save_workspace(ws)
-    return {"name": name, "created": ws.created}
-
-
-def _handle_workspace_delete(name: str) -> dict:
-    if not workspace_exists(name):
-        return {"error": f"Workspace '{name}' not found."}
-    delete_workspace(name)
-    return {"name": name, "deleted": True}
-
-
-def _handle_workspace_add(name: str, keys: list[str], library: str = "user") -> dict:
-    if not workspace_exists(name):
-        return {"error": f"Workspace '{name}' not found."}
+def _handle_workspace_query(question: str, workspace: str | None = None, top_k: int = 5, library: str = "user") -> dict:
     reader = _get_reader(library)
-    ws = load_workspace(name)
-    added = []
-    skipped = []
-    not_found = []
-    for key in keys:
-        item = reader.get_item(key)
-        if item is None:
-            not_found.append(key)
-            continue
-        if ws.add_item(key, item.title):
-            added.append(key)
-        else:
-            skipped.append(key)
-    save_workspace(ws)
-    return {"added": added, "skipped": skipped, "not_found": not_found}
-
-
-def _handle_workspace_remove(name: str, keys: list[str]) -> dict:
-    if not workspace_exists(name):
-        return {"error": f"Workspace '{name}' not found."}
-    ws = load_workspace(name)
-    removed = []
-    not_found = []
-    for key in keys:
-        if ws.remove_item(key):
-            removed.append(key)
-        else:
-            not_found.append(key)
-    save_workspace(ws)
-    return {"removed": removed, "not_in_workspace": not_found}
-
-
-def _handle_workspace_list() -> dict:
-    workspaces = list_workspaces()
+    collection_key = None
+    if workspace:
+        collection_key = resolve_collection_key(reader, workspace)
+        if collection_key is None:
+            return {"error": f"Collection '{workspace}' not found. Use collection_list to see available collections."}
+    results = rank(reader, question, collection_key=collection_key, top_k=top_k)
     return {
-        "workspaces": [
+        "query": question,
+        "workspace": workspace,
+        "results": [
             {
-                "name": ws.name,
-                "description": ws.description,
-                "items": len(ws.items),
-                "created": ws.created,
+                "rank": i + 1,
+                "score": r["score"],
+                "scores": r["scores"],
+                "item_key": r["item"].key,
+                "title": r["item"].title,
+                "creators": [c.full_name for c in r["item"].creators],
+                "date": r["item"].date,
+                "snippet": make_snippet(r["item"], r["terms"]),
             }
-            for ws in workspaces
-        ]
+            for i, r in enumerate(results)
+        ],
     }
 
 
-def _handle_workspace_show(name: str, limit: int = 50, library: str = "user") -> dict:
-    if not workspace_exists(name):
-        return {"error": f"Workspace '{name}' not found."}
-    ws = load_workspace(name)
-    if not ws.items:
-        return {"name": name, "items": [], "total": 0}
+def _handle_ask(question: str, workspace: str | None = None, evidence_k: int = 12, library: str = "user") -> dict:
     reader = _get_reader(library)
-    items = []
-    missing = []
-    for ws_item in ws.items[:limit]:
-        item = reader.get_item(ws_item.key)
-        if item is not None:
-            items.append(_item_to_dict(item))
-        else:
-            missing.append(ws_item.key)
-    return {"name": name, "items": items, "missing": missing, "total": len(ws.items)}
-
-
-def _handle_workspace_export(name: str, fmt: str = "markdown", library: str = "user") -> dict:
-    if not workspace_exists(name):
-        return {"error": f"Workspace '{name}' not found."}
-    ws = load_workspace(name)
-    if not ws.items:
-        return {"error": f"Workspace '{name}' is empty."}
-    reader = _get_reader(library)
-    items = []
-    for ws_item in ws.items:
-        item = reader.get_item(ws_item.key)
-        if item is not None:
-            items.append(item)
-    if not items:
-        return {"error": "No items could be resolved from Zotero library."}
-
-    if fmt == "json":
-        return {"format": "json", "items": [_item_to_dict(i) for i in items]}
-    elif fmt == "bibtex":
-        entries = []
-        for item in items:
-            bib = reader.export_citation(item.key, fmt="bibtex")
-            if bib:
-                entries.append(bib)
-        return {"format": "bibtex", "content": "\n\n".join(entries)}
-    else:
-        # markdown
-        lines = [f"# Workspace: {name}"]
-        desc_part = f" {ws.description}" if ws.description else ""
-        lines.append(f"> {desc_part.strip()} ({len(items)} items)")
-        lines.append("")
-        for i, item in enumerate(items, 1):
-            lines.append("---")
-            lines.append(f"## {i}. {item.title}")
-            authors = ", ".join(c.full_name for c in item.creators[:3])
-            if len(item.creators) > 3:
-                authors += " et al."
-            year = item.date or "N/A"
-            lines.append(f"**Authors:** {authors} | **Year:** {year} | **Key:** {item.key}")
-            if item.tags:
-                lines.append(f"**Tags:** {', '.join(item.tags)}")
-            if item.abstract:
-                lines.append(f"**Abstract:** {item.abstract}")
-            lines.append("")
-        return {"format": "markdown", "content": "\n".join(lines)}
-
-
-def _handle_workspace_import(
-    name: str,
-    collection: str | None = None,
-    tag: str | None = None,
-    search_query: str | None = None,
-    library: str = "user",
-) -> dict:
-    if not workspace_exists(name):
-        return {"error": f"Workspace '{name}' not found."}
-    if not collection and not tag and not search_query:
-        return {"error": "Must specify at least one of collection, tag, or search_query."}
-
-    reader = _get_reader(library)
-    ws = load_workspace(name)
-    items_to_import: list[Item] = []
-
-    if collection:
-        col_key = _resolve_collection_key(reader, collection)
-        if col_key is None:
-            return {"error": f"Collection '{collection}' not found."}
-        items_to_import.extend(reader.get_collection_items(col_key))
-
-    if tag:
-        result = reader.search(tag, limit=500)
-        for item in result.items:
-            if tag.lower() in [t.lower() for t in item.tags]:
-                items_to_import.append(item)
-
-    if search_query:
-        result = reader.search(search_query, limit=500)
-        items_to_import.extend(result.items)
-
-    # Dedup
-    seen: set[str] = set()
-    unique: list[Item] = []
-    for item in items_to_import:
-        if item.key not in seen:
-            seen.add(item.key)
-            unique.append(item)
-
-    added = 0
-    skipped = 0
-    for item in unique:
-        if ws.add_item(item.key, item.title):
-            added += 1
-        else:
-            skipped += 1
-    save_workspace(ws)
-    return {"added": added, "skipped": skipped, "total_found": len(unique)}
-
-
-def _handle_workspace_search(name: str, query: str, limit: int = 50, library: str = "user") -> dict:
-    if not workspace_exists(name):
-        return {"error": f"Workspace '{name}' not found."}
-    ws = load_workspace(name)
-    if not ws.items:
-        return {"items": [], "total": 0}
-    reader = _get_reader(library)
-    query_lower = query.lower()
-    matches = []
-    for ws_item in ws.items:
-        item = reader.get_item(ws_item.key)
-        if item is None:
-            continue
-        searchable = " ".join(
-            filter(
-                None,
-                [
-                    item.title,
-                    " ".join(c.full_name for c in item.creators),
-                    item.abstract or "",
-                    " ".join(item.tags),
-                ],
-            )
-        ).lower()
-        # Tokenized word match: every query word must appear somewhere
-        query_words = query_lower.split()
-        if all(w in searchable for w in query_words):
-            matches.append(item)
-    return {"items": [_item_to_dict(i) for i in matches[:limit]], "total": len(matches)}
-
-
-def _handle_workspace_index(
-    name: str, force: bool = False, library: str = "user", skip_tags: list[str] | None = None
-) -> dict:
-    from zotero_cli_cc.core.rag import (
-        build_metadata_chunk,
-        chunk_text,
-        compute_term_frequencies,
-        convert_pdf_to_text,
-        embed_texts,
-        tokenize,
-    )
-    from zotero_cli_cc.core.rag_index import RagIndex
-
-    if not workspace_exists(name):
-        return {"error": f"Workspace '{name}' not found."}
-    ws = load_workspace(name)
-    if not ws.items:
-        return {"error": f"Workspace '{name}' is empty."}
-
-    reader = _get_reader(library)
-    skip_set = {t.strip() for t in (skip_tags if skip_tags is not None else ["skip-index"]) if t.strip()}
-
-    idx_path = workspaces_dir() / f"{name}.idx.sqlite"
-    idx = RagIndex(idx_path)
-    md_cache_path = workspaces_dir() / ".md_cache.sqlite"
-    md_cache = PdfCache(db_path=md_cache_path)
-
-    try:
-        if force:
-            idx.clear()
-
-        already_indexed = idx.get_indexed_keys()
-        to_index = [item for item in ws.items if item.key not in already_indexed]
-
-        if not to_index:
-            return {"status": "up_to_date", "indexed": len(already_indexed)}
-
-        t0 = time.monotonic()
-        total_chunks = 0
-        all_chunk_ids: list[int] = []
-        all_chunk_texts: list[str] = []
-
-        for ws_item in to_index:
-            item = reader.get_item(ws_item.key)
-            if item is None:
-                continue
-            authors = ", ".join(c.full_name for c in item.creators)
-            meta_text = build_metadata_chunk(item.title, authors, item.abstract, item.tags)
-            chunk_id = idx.insert_chunk(ws_item.key, "metadata", meta_text)
-            tfs = compute_term_frequencies(tokenize(meta_text))
-            idx.insert_bm25_terms(chunk_id, tfs)
-            all_chunk_ids.append(chunk_id)
-            all_chunk_texts.append(meta_text)
-            total_chunks += 1
-
-            att = reader.get_pdf_attachment(ws_item.key, skip_tags=skip_set)
-            if att is not None:
-                pdf_path = att.path
-                if pdf_path and pdf_path.exists():
-                    try:
-                        pdf_text = convert_pdf_to_text(pdf_path)
-                        chunks = chunk_text(pdf_text, item.title)
-                        for chunk_content in chunks:
-                            cid = idx.insert_chunk(ws_item.key, "pdf", chunk_content)
-                            tfs = compute_term_frequencies(tokenize(chunk_content))
-                            idx.insert_bm25_terms(cid, tfs)
-                            all_chunk_ids.append(cid)
-                            all_chunk_texts.append(chunk_content)
-                            total_chunks += 1
-                    except Exception:
-                        _log.warning("Failed to extract/index PDF for item %s", ws_item.key, exc_info=True)
-
-        # Update BM25 statistics
-        all_chunks = idx.get_all_chunks()
-        total_docs = len(all_chunks)
-        avg_doc_len = sum(len(tokenize(c["content"])) for c in all_chunks) / total_docs if total_docs > 0 else 1.0
-        idx.set_meta("total_docs", str(total_docs))
-        idx.set_meta("avg_doc_len", str(avg_doc_len))
-        idx.set_meta("chunk_count", str(total_docs))
-        idx.set_meta("indexed_at", datetime.now(timezone.utc).isoformat())
-
-        mode_label = "bm25"
-        emb_cfg = load_embedding_config()
-        if emb_cfg.is_configured and all_chunk_texts:
-            try:
-                vectors = embed_texts(all_chunk_texts, emb_cfg)
-                if vectors:
-                    for cid, vec in zip(all_chunk_ids, vectors):
-                        idx.set_embedding(cid, vec)
-                    mode_label = "bm25+embeddings"
-            except Exception:
-                _log.warning("Failed to compute embeddings for %d chunks", len(all_chunk_texts), exc_info=True)
-        elapsed = time.monotonic() - t0
-        return {
-            "items_indexed": len(to_index),
-            "chunks": total_chunks,
-            "mode": mode_label,
-            "elapsed_seconds": round(elapsed, 1),
-        }
-    finally:
-        md_cache.close()
-        idx.close()
-
-
-def _handle_workspace_query(name: str, question: str, top_k: int = 5, mode: str = "auto") -> dict:
-    from zotero_cli_cc.core.rag import (
-        bm25_score_chunks,
-        embed_texts,
-        reciprocal_rank_fusion,
-        semantic_score_chunks,
-    )
-    from zotero_cli_cc.core.rag_index import RagIndex
-
-    if not workspace_exists(name):
-        return {"error": f"Workspace '{name}' not found."}
-    idx_path = workspaces_dir() / f"{name}.idx.sqlite"
-    if not idx_path.exists():
-        return {"error": f"No index for workspace '{name}'. Run workspace_index first."}
-
-    idx = RagIndex(idx_path)
-    try:
-        has_embeddings = len(idx.get_all_embeddings()) > 0
-        effective_mode = ("hybrid" if has_embeddings else "bm25") if mode == "auto" else mode
-
-        bm25_results: list[tuple[int, float, dict]] = []
-        semantic_results: list[tuple[int, float, dict]] = []
-
-        if effective_mode in ("bm25", "hybrid"):
-            bm25_results = bm25_score_chunks(idx, question)
-
-        if effective_mode in ("semantic", "hybrid") and has_embeddings:
-            emb_cfg = load_embedding_config()
-            if emb_cfg.is_configured:
-                try:
-                    q_vecs = embed_texts([question], emb_cfg)
-                    if q_vecs:
-                        semantic_results = semantic_score_chunks(idx, q_vecs[0])
-                except Exception:
-                    pass
-
-        if effective_mode == "hybrid" and bm25_results and semantic_results:
-            merged = reciprocal_rank_fusion(bm25_results, semantic_results)
-        elif semantic_results and effective_mode in ("semantic", "hybrid"):
-            merged = semantic_results
-        else:
-            merged = bm25_results
-
-        top = merged[:top_k]
-        return {
-            "results": [
-                {
-                    "rank": i + 1,
-                    "score": round(score, 4),
-                    "item_key": chunk["item_key"],
-                    "source": chunk["source"],
-                    "content": chunk["content"][:500],
-                }
-                for i, (_cid, score, chunk) in enumerate(top)
-            ],
-            "mode": effective_mode,
-        }
-    finally:
-        idx.close()
-
-
-def _resolve_collection_key(reader: ZoteroReader, name_or_key: str) -> str | None:
-    """Resolve a collection name or key to a collection key."""
-    collections = reader.get_collections()
-
-    def _search(colls: list[Collection]) -> str | None:
-        for c in colls:
-            if c.key == name_or_key or c.name.lower() == name_or_key.lower():
-                return c.key
-            found = _search(c.children)
-            if found:
-                return found
-        return None
-
-    return _search(collections)
+    collection_key = None
+    if workspace:
+        collection_key = resolve_collection_key(reader, workspace)
+        if collection_key is None:
+            return {"error": f"Collection '{workspace}' not found. Use collection_list to see available collections."}
+    ranked = rank(reader, question, collection_key=collection_key, top_k=evidence_k)
+    evidence = build_ask_evidence(reader, ranked, evidence_k=evidence_k)
+    return {
+        "question": question,
+        "workspace": workspace,
+        "mode": "index-free",
+        "evidence": evidence,
+        "answer_instructions": ANSWER_INSTRUCTIONS,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1712,147 +1352,45 @@ def add_from_pdf(file_path: str, doi_override: str | None = None, library: str =
 
 
 # ---------------------------------------------------------------------------
-# Workspace tools
+# Workspace tools (index-free; a workspace is a Zotero collection)
 # ---------------------------------------------------------------------------
 
 
 @mcp.tool()
-def workspace_new(name: str, description: str = "") -> dict:
-    """Create a new local workspace for organizing papers by topic.
+def workspace_query(question: str, workspace: str | None = None, top_k: int = 5, library: str = "user") -> dict:
+    """Rank papers by relevance to a natural-language question.
+
+    Index-free retrieval over Zotero's own full-text index plus metadata,
+    fused with RRF. Always fresh — there is no index to build. A workspace
+    is simply a Zotero collection; manage membership in the Zotero app or
+    via the collection_* tools.
 
     Args:
-        name: Workspace name in kebab-case (e.g. 'llm-safety', 'protein-folding').
-        description: Optional description of the workspace topic.
-    """
-    return _handle_workspace_new(name, description)
-
-
-@mcp.tool()
-def workspace_delete(name: str) -> dict:
-    """Delete a workspace.
-
-    Args:
-        name: Name of the workspace to delete.
-    """
-    return _handle_workspace_delete(name)
-
-
-@mcp.tool()
-def workspace_add(name: str, keys: list[str], library: str = "user") -> dict:
-    """Add Zotero items to a workspace by key.
-
-    Args:
-        name: Workspace name.
-        keys: List of Zotero item keys to add (e.g. ['ABC123', 'DEF456']).
-        library: Library — 'user' (default) or 'group:<id>'.
-    """
-    return _handle_workspace_add(name, keys, library=library)
-
-
-@mcp.tool()
-def workspace_remove(name: str, keys: list[str]) -> dict:
-    """Remove items from a workspace by key.
-
-    Args:
-        name: Workspace name.
-        keys: List of Zotero item keys to remove.
-    """
-    return _handle_workspace_remove(name, keys)
-
-
-@mcp.tool()
-def workspace_list() -> dict:
-    """List all local workspaces with their descriptions and item counts."""
-    return _handle_workspace_list()
-
-
-@mcp.tool()
-def workspace_show(name: str, limit: int = 50, library: str = "user") -> dict:
-    """Show items in a workspace with full metadata from Zotero.
-
-    Args:
-        name: Workspace name.
-        limit: Maximum number of items to return (default 50).
-        library: Library — 'user' (default) or 'group:<id>'.
-    """
-    return _handle_workspace_show(name, limit, library=library)
-
-
-@mcp.tool()
-def workspace_export(name: str, fmt: str = "markdown", library: str = "user") -> dict:
-    """Export workspace items in markdown, JSON, or BibTeX format.
-
-    Args:
-        name: Workspace name.
-        fmt: Export format — 'markdown' (default), 'json', or 'bibtex'.
-        library: Library — 'user' (default) or 'group:<id>'.
-    """
-    return _handle_workspace_export(name, fmt, library=library)
-
-
-@mcp.tool()
-def workspace_import(
-    name: str,
-    collection: str | None = None,
-    tag: str | None = None,
-    search_query: str | None = None,
-    library: str = "user",
-) -> dict:
-    """Bulk import items into a workspace from a collection, tag, or search query.
-
-    Args:
-        name: Workspace name.
-        collection: Import all items from this collection (name or key).
-        tag: Import all items with this tag.
-        search_query: Import items matching this search query.
-        library: Library — 'user' (default) or 'group:<id>'.
-    """
-    return _handle_workspace_import(name, collection=collection, tag=tag, search_query=search_query, library=library)
-
-
-@mcp.tool()
-def workspace_search(name: str, query: str, limit: int = 50, library: str = "user") -> dict:
-    """Search items within a workspace by title, author, abstract, or tags.
-
-    Args:
-        name: Workspace name.
-        query: Search query string.
-        limit: Maximum number of results (default 50).
-        library: Library — 'user' (default) or 'group:<id>'.
-    """
-    return _handle_workspace_search(name, query, limit, library=library)
-
-
-@mcp.tool()
-def workspace_index(name: str, force: bool = False, library: str = "user", skip_tags: list[str] | None = None) -> dict:
-    """Build or update RAG index for a workspace (BM25 + optional embeddings).
-
-    Indexes metadata and PDF full text for natural language querying.
-
-    Args:
-        name: Workspace name.
-        force: If True, rebuild index from scratch (default False).
-        library: Library — 'user' (default) or 'group:<id>'.
-        skip_tags: PDF attachments carrying any of these tags are skipped
-            (e.g. machine-translated copies or slides). Defaults to
-            ['skip-index']; pass [] to index every attachment.
-    """
-    return _handle_workspace_index(name, force=force, library=library, skip_tags=skip_tags)
-
-
-@mcp.tool()
-def workspace_query(name: str, question: str, top_k: int = 5, mode: str = "auto") -> dict:
-    """Query workspace papers with natural language using RAG retrieval.
-
-    Returns ranked chunks from indexed papers matching the question.
-
-    Args:
-        name: Workspace name.
         question: Natural language query.
+        workspace: Optional collection name or key to scope the search
+            (default: whole library).
         top_k: Number of results to return (default 5).
-        mode: Retrieval mode — 'auto' (default), 'bm25', 'semantic', or 'hybrid'.
+        library: Library — 'user' (default) or 'group:<id>'.
     """
-    return _handle_workspace_query(name, question, top_k=top_k, mode=mode)
+    return _handle_workspace_query(question, workspace=workspace, top_k=top_k, library=library)
+
+
+@mcp.tool()
+def ask(question: str, workspace: str | None = None, evidence_k: int = 12, library: str = "user") -> dict:
+    """Retrieve a citation-keyed evidence pack to answer a question.
+
+    Returns evidence entries tagged with Zotero item keys (cite_key) plus
+    answer_instructions. zot does not call an LLM — synthesize and cite the
+    answer from the evidence yourself.
+
+    Args:
+        question: Natural language question.
+        workspace: Optional collection name or key to scope retrieval
+            (default: whole library).
+        evidence_k: Number of evidence entries to return (default 12).
+        library: Library — 'user' (default) or 'group:<id>'.
+    """
+    return _handle_ask(question, workspace=workspace, evidence_k=evidence_k, library=library)
 
 
 # ---------------------------------------------------------------------------

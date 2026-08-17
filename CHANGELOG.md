@@ -7,6 +7,37 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **A workspace is now just a Zotero collection** — `zot workspace query` and
+  `zot ask` resolve `--workspace` to a collection (name or key; omit it to
+  search the whole library). Manage membership in the Zotero app or via
+  `zot collection *`; zot stores nothing locally.
+- **Retrieval is now index-free** — a two-stage ranker replaces the pre-built
+  RAG index: stage 1 scores items with idf-weighted term coverage from
+  Zotero's own full-text index tables, fused via reciprocal rank fusion with
+  metadata matching (title/abstract/creators/tags/notes); stage 2 (`ask`)
+  extracts PDF passages on the fly around query terms (pdfium, cached).
+  Results are always fresh — there is no index to build or rebuild.
+- `zot ask`'s `--workspace` flag is now optional.
+
+### Removed
+
+- **`zot workspace` curation and indexing subcommands** (`new`, `delete`,
+  `add`, `remove`, `list`, `show`, `export`, `import`, `search`, `index`) —
+  superseded by Zotero collections. Local workspaces under
+  `~/.config/zot/workspaces/` (JSON and `*.idx.sqlite`) are no longer read and
+  can be deleted; recreate the same sets as collections in Zotero.
+- **Embedding support** — the `[embedding]` config section, the
+  `ZOT_EMBEDDING_URL` / `ZOT_EMBEDDING_KEY` / `ZOT_EMBEDDING_MODEL` /
+  `ZOT_EMBEDDING_PROVIDER` environment variables, and the aliyun/jina
+  providers. The unused `openai` dependency was dropped from the package.
+- **MCP tools**: `workspace_new`, `workspace_delete`, `workspace_add`,
+  `workspace_remove`, `workspace_list`, `workspace_show`, `workspace_export`,
+  `workspace_import`, `workspace_search`, `workspace_index` (39 tools remain).
+  `workspace_query` was reworked (`name` → optional `workspace`, returns
+  ranked items with snippets) and a new `ask` tool mirrors the CLI.
+
 ## [0.11.0] - 2026-08-17
 
 ### Changed

@@ -76,10 +76,6 @@ default_style = "bibtex"
 | `ZOT_API_KEY` | Override API Key (write operations) |
 | `ZOT_PROFILE` | Override default config profile |
 | `S2_API_KEY` | Semantic Scholar API key (for `update-status`) |
-| `ZOT_EMBEDDING_URL` | Embedding API endpoint (default: Jina AI) |
-| `ZOT_EMBEDDING_KEY` | Embedding API key (enables semantic workspace search) |
-| `ZOT_EMBEDDING_MODEL` | Embedding model name (default: `jina-embeddings-v3`) |
-| `ZOT_EMBEDDING_PROVIDER` | Embedding provider: `jina` (default), `aliyun`, or `openai` (any OpenAI-compatible `/v1/embeddings` endpoint — set `ZOT_EMBEDDING_URL` to its base URL) |
 
 ## Multiple Profiles
 

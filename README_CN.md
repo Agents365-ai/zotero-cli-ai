@@ -18,9 +18,9 @@
 
 - **读操作** — 直接读取本地 SQLite，零配置、离线可用、毫秒级响应
 - **写操作** — 通过 Zotero Web API 安全写入，Zotero 完全感知变更
-- **PDF + RAG** — 提取 PDF 全文并自动缓存；内置 BM25（可选向量）按主题工作空间检索
+- **PDF + 排序检索** — 提取 PDF 全文并自动缓存；免索引两阶段排序检索，覆盖全库或指定分类（Collection）
 - **Agent-native** — 稳定 JSON envelope、类型化退出码、`zot schema`、`--dry-run`、`--idempotency-key`、NDJSON 流
-- **MCP 服务器** — 通过 `zot mcp serve` 向 Claude Desktop / LM Studio / Cursor 暴露 48 个工具
+- **MCP 服务器** — 通过 `zot mcp serve` 向 Claude Desktop / LM Studio / Cursor 暴露 39 个工具
 
 ## 架构
 
@@ -74,7 +74,7 @@ cp -r skill/zotero-cli ~/.claude/skills/
 | 笔记、标签、引用 | [笔记与标签](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/notes-tags/)、[引用导出](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/citations/) |
 | 增 / 改 / 删条目 | [条目管理](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/item-management/) |
 | 分类（Collection） | [Collections](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/collections/) |
-| 工作空间 + RAG | [Workspace](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/workspace/) |
+| 工作空间（即 Collection） | [Workspace](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/workspace/) |
 | PDF 提取 | [PDF](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/pdf/) |
 | 预印本 → 已发表 | [update-status](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/update-status/) |
 | MCP 配置与工具 | [MCP](https://agents365-ai.github.io/zotero-cli-ai/zh/mcp/setup/) |
