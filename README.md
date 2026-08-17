@@ -1,20 +1,20 @@
-# zot — Let Zotero Fly in Your Terminal
+# zot — A Zotero CLI for Any AI Agent
 
 <p align="center">
-  <img src="asserts/banner_official.png" alt="zotero-cli-cc banner" width="720">
+  <img src="asserts/banner_official.png" alt="zotero-cli banner" width="720">
 </p>
 
 <p align="center">
   <a href="https://pypi.org/project/zotero-cli-cc/"><img src="https://img.shields.io/pypi/v/zotero-cli-cc?color=blue" alt="PyPI version"></a>
-  <a href="https://github.com/Agents365-ai/zotero-cli-cc/actions/workflows/ci.yml"><img src="https://github.com/Agents365-ai/zotero-cli-cc/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Agents365-ai/zotero-cli/actions/workflows/ci.yml"><img src="https://github.com/Agents365-ai/zotero-cli/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://pypi.org/project/zotero-cli-cc/"><img src="https://img.shields.io/pypi/pyversions/zotero-cli-cc" alt="Python versions"></a>
   <a href="https://www.gnu.org/licenses/agpl-3.0"><img src="https://img.shields.io/badge/license-AGPL--3.0%20%2B%20Commercial-blue" alt="License"></a>
-  <a href="https://agents365-ai.github.io/zotero-cli-cc/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue" alt="Docs"></a>
+  <a href="https://agents365-ai.github.io/zotero-cli/"><img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue" alt="Docs"></a>
 </p>
 
-[中文](README_CN.md) | [Documentation](https://agents365-ai.github.io/zotero-cli-cc/)
+[中文](README_CN.md) | [Documentation](https://agents365-ai.github.io/zotero-cli/)
 
-`zotero-cli-cc` is a Zotero CLI built for [Claude Code](https://claude.ai/code) and AI agents.
+`zotero-cli` is a Zotero CLI for any AI agent.
 
 - **Reads** — direct local SQLite, zero-config, offline, millisecond response
 - **Writes** — safe via Zotero Web API, Zotero stays in sync
@@ -36,6 +36,8 @@ pipx install zotero-cli-cc         # or
 pip install zotero-cli-cc          # or
 ```
 
+> **Note:** the PyPI package is `zotero-cli-cc` (`zotero-cli` is an unrelated older project); the installed command is `zot`.
+
 ## 60-second quickstart
 
 ```bash
@@ -52,7 +54,7 @@ zot add --doi "10.1038/s41586-023-06139-9"
 In Claude Code, just ask in natural language — the bundled skill maps requests to `zot` commands automatically:
 
 ```bash
-cp -r skill/zotero-cli-cc ~/.claude/skills/
+cp -r skill/zotero-cli ~/.claude/skills/
 ```
 
 When stdout is not a TTY, `zot` automatically emits a stable JSON envelope so agents never need `--json`:
@@ -63,25 +65,25 @@ When stdout is not a TTY, `zot` automatically emits a stable JSON envelope so ag
 
 ## Documentation
 
-Full docs live at **<https://agents365-ai.github.io/zotero-cli-cc/>**.
+Full docs live at **<https://agents365-ai.github.io/zotero-cli/>**.
 
 | Topic | Link |
 | --- | --- |
-| Installation & setup | [Getting started](https://agents365-ai.github.io/zotero-cli-cc/getting-started/installation/) |
-| Search, list, read | [Search guide](https://agents365-ai.github.io/zotero-cli-cc/guide/search/) |
-| Notes, tags, citations | [Notes & tags](https://agents365-ai.github.io/zotero-cli-cc/guide/notes-tags/), [Citations](https://agents365-ai.github.io/zotero-cli-cc/guide/citations/) |
-| Add / update / delete items | [Item management](https://agents365-ai.github.io/zotero-cli-cc/guide/item-management/) |
-| Collections | [Collections](https://agents365-ai.github.io/zotero-cli-cc/guide/collections/) |
-| Workspaces + RAG | [Workspaces](https://agents365-ai.github.io/zotero-cli-cc/guide/workspace/) |
-| PDF extraction | [PDF](https://agents365-ai.github.io/zotero-cli-cc/guide/pdf/) |
-| Preprint → published | [update-status](https://agents365-ai.github.io/zotero-cli-cc/guide/update-status/) |
-| MCP setup & tools | [MCP](https://agents365-ai.github.io/zotero-cli-cc/mcp/setup/) |
-| Full CLI reference | [CLI reference](https://agents365-ai.github.io/zotero-cli-cc/reference/cli/) |
+| Installation & setup | [Getting started](https://agents365-ai.github.io/zotero-cli/getting-started/installation/) |
+| Search, list, read | [Search guide](https://agents365-ai.github.io/zotero-cli/guide/search/) |
+| Notes, tags, citations | [Notes & tags](https://agents365-ai.github.io/zotero-cli/guide/notes-tags/), [Citations](https://agents365-ai.github.io/zotero-cli/guide/citations/) |
+| Add / update / delete items | [Item management](https://agents365-ai.github.io/zotero-cli/guide/item-management/) |
+| Collections | [Collections](https://agents365-ai.github.io/zotero-cli/guide/collections/) |
+| Workspaces + RAG | [Workspaces](https://agents365-ai.github.io/zotero-cli/guide/workspace/) |
+| PDF extraction | [PDF](https://agents365-ai.github.io/zotero-cli/guide/pdf/) |
+| Preprint → published | [update-status](https://agents365-ai.github.io/zotero-cli/guide/update-status/) |
+| MCP setup & tools | [MCP](https://agents365-ai.github.io/zotero-cli/mcp/setup/) |
+| Full CLI reference | [CLI reference](https://agents365-ai.github.io/zotero-cli/reference/cli/) |
 | Agent contract (envelope, exit codes, schema) | [`docs/agent-interface.md`](docs/agent-interface.md) |
-| Comparison with similar tools | [Comparison](https://agents365-ai.github.io/zotero-cli-cc/comparison/) |
+| Comparison with similar tools | [Comparison](https://agents365-ai.github.io/zotero-cli/comparison/) |
 | Roadmap | [`ROADMAP.md`](ROADMAP.md) |
 
-**Why zotero-cli-cc?** The only actively maintained Python CLI that reads Zotero's local SQLite database directly, with a clean read/write split: SQLite for fast offline reads, Web API for safe writes that Zotero stays aware of. See the [comparison page](https://agents365-ai.github.io/zotero-cli-cc/comparison/) for a feature-by-feature breakdown against similar tools.
+**Why zotero-cli?** The only actively maintained Python CLI that reads Zotero's local SQLite database directly, with a clean read/write split: SQLite for fast offline reads, Web API for safe writes that Zotero stays aware of. See the [comparison page](https://agents365-ai.github.io/zotero-cli/comparison/) for a feature-by-feature breakdown against similar tools.
 
 ## Support
 
@@ -121,7 +123,7 @@ If `zot` helps you, consider supporting the author:
 
 ## License
 
-zotero-cli-cc is **dual-licensed**:
+zotero-cli is **dual-licensed**:
 
 - **Open source:** [GNU AGPL-3.0-or-later](https://www.gnu.org/licenses/agpl-3.0) (see [LICENSE](LICENSE)).
 - **Commercial:** a separate commercial license is available for use in

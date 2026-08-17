@@ -1,7 +1,7 @@
 [project]
 name = "zotero-cli-cc"
 version = "0.10.0"
-description = "Zotero CLI for Claude Code — SQLite reads + Web API writes"
+description = "Zotero CLI for any AI agent — SQLite reads + Web API writes"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE", "LICENSE-COMMERCIAL"]
 requires-python = ">=3.10"

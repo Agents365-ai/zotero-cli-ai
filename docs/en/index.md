@@ -7,9 +7,9 @@ hide:
   <img src="assets/banner_official.png" alt="zotero-cli-cc banner" width="720">
 </p>
 
-# zot — Let Zotero Fly in Your Terminal
+# zot — A Zotero CLI for Any AI Agent
 
-`zotero-cli-cc` is a Zotero CLI designed for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+`zotero-cli-cc` is a Zotero CLI for any AI agent.
 
 **Core Features:**
 
@@ -17,7 +17,7 @@ hide:
 - **Writes**: Safe writes through Zotero Web API — Zotero fully aware of changes
 - **PDF**: Extract full text from local PDF storage with automatic caching
 - **Workspace**: Organize papers by topic with local workspaces + built-in RAG search
-- **MCP**: 45 tools for AI coding assistants (Claude Desktop, Cursor, LM Studio)
+- **MCP**: 48 tools for AI coding assistants (Claude Desktop, Cursor, LM Studio)
 
 **Search and read papers without launching Zotero desktop.**
 

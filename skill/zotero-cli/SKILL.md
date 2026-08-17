@@ -1,5 +1,5 @@
 ---
-name: zotero-cli-cc
+name: zotero-cli
 description: Use when user mentions papers, references, citations, Zotero, literature, bibliography, workspaces, or needs to search, read, export, or organize documents. Handles all zot CLI operations including workspace-based RAG search.
 ---
 
