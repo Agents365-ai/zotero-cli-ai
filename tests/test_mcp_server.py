@@ -794,6 +794,20 @@ class TestHandleCollectionMove:
         writer.move_to_collection.assert_called_once_with("ITEM1", "COL1")
 
 
+class TestHandleCollectionRemove:
+    @patch("zotero_cli_cc.mcp_server._get_writer")
+    def test_removes_item(self, mock_get_writer):
+        from zotero_cli_cc.mcp_server import _handle_collection_remove
+
+        writer = MagicMock()
+        mock_get_writer.return_value = writer
+
+        result = _handle_collection_remove("ITEM1", "COL1")
+        assert result["item_key"] == "ITEM1"
+        assert result["collection_key"] == "COL1"
+        writer.remove_from_collection.assert_called_once_with("ITEM1", "COL1")
+
+
 class TestHandleCollectionDelete:
     @patch("zotero_cli_cc.mcp_server._get_writer")
     def test_deletes_collection(self, mock_get_writer):
@@ -970,12 +984,12 @@ class TestMcpWriteErrorHandling:
 
 
 # ---------------------------------------------------------------------------
-# Workspace handler tests
+# Ranked search / ask handler tests
 # ---------------------------------------------------------------------------
 
 
-class TestHandleWorkspaceQueryAsk:
-    """Index-free, collection-backed workspace query + ask evidence packs."""
+class TestHandleRankedSearchAsk:
+    """Index-free ranked search + ask evidence packs."""
 
     @pytest.fixture
     def reader(self, test_data_dir):
@@ -987,27 +1001,27 @@ class TestHandleWorkspaceQueryAsk:
 
     @patch("zotero_cli_cc.mcp_server._get_reader")
     def test_query_ranks_items(self, mock_get_reader, reader):
-        from zotero_cli_cc.mcp_server import _handle_workspace_query
+        from zotero_cli_cc.mcp_server import _handle_search
 
         mock_get_reader.return_value = reader
-        result = _handle_workspace_query("transformer attention")
+        result = _handle_search("transformer attention", None, 5, ranked=True)
         assert result["results"][0]["item_key"] == "ATTN001"
         assert result["results"][0]["snippet"]
 
     @patch("zotero_cli_cc.mcp_server._get_reader")
     def test_query_collection_scope(self, mock_get_reader, reader):
-        from zotero_cli_cc.mcp_server import _handle_workspace_query
+        from zotero_cli_cc.mcp_server import _handle_search
 
         mock_get_reader.return_value = reader
-        result = _handle_workspace_query("transformer attention", workspace="Transformers")
+        result = _handle_search("transformer attention", "Transformers", 5, ranked=True)
         assert [r["item_key"] for r in result["results"]] == ["ATTN001"]
 
     @patch("zotero_cli_cc.mcp_server._get_reader")
     def test_query_unknown_collection(self, mock_get_reader, reader):
-        from zotero_cli_cc.mcp_server import _handle_workspace_query
+        from zotero_cli_cc.mcp_server import _handle_search
 
         mock_get_reader.return_value = reader
-        result = _handle_workspace_query("anything", workspace="Nope")
+        result = _handle_search("anything", "Nope", 5, ranked=True)
         assert "error" in result
 
     @patch("zotero_cli_cc.core.rank.convert_pdf_to_text", return_value="attention mechanism text")

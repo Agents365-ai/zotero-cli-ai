@@ -265,6 +265,16 @@ class ZoteroWriter:
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
 
+    def remove_from_collection(self, item_key: str, collection_key: str) -> None:
+        try:
+            self._zot.deletefrom_collection(collection_key, self._zot.item(item_key))
+        except ResourceNotFoundError:
+            raise ZoteroWriteError("Item or collection not found", code="not_found")
+        except (HttpxConnectError, HttpxTimeoutException) as e:
+            raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
+        except PyZoteroError as e:
+            raise _friendly_api_error(e) from e
+
     def delete_collection(self, key: str) -> None:
         try:
             coll = self._zot.collection(key)

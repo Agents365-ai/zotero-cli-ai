@@ -132,6 +132,54 @@ def collection_move(
         click.echo(SYNC_REMINDER)
 
 
+@collection_group.command("remove")
+@click.argument("item_key")
+@click.argument("collection_key")
+@click.option("--dry-run", is_flag=True, help="Preview without calling the API")
+@click.option("--idempotency-key", default=None, help="Key so retries are safe; same key returns the original result")
+@click.pass_context
+def collection_remove(
+    ctx: click.Context, item_key: str, collection_key: str, dry_run: bool, idempotency_key: str | None
+) -> None:
+    """Remove an item from a collection (the item itself stays in the library)."""
+    cfg = load_config(profile=ctx.obj.get("profile"))
+    json_out = ctx.obj.get("json", False)
+    if dry_run:
+        data = {"would": {"item_key": item_key, "collection_key": collection_key}}
+        env = envelope_ok(data, extra={"dry_run": True})
+        if json_out:
+            click.echo(json.dumps(env, indent=2, ensure_ascii=False))
+        else:
+            click.echo(f"[dry-run] Would remove {item_key} from collection {collection_key}")
+        return
+    from zotero_cli_cc.core.idempotency import get_cached, store_cached
+
+    cache_scope = f"collection_remove:{item_key}:{collection_key}"
+    if idempotency_key:
+        cached = get_cached(cache_scope, idempotency_key)
+        if cached is not None:
+            if json_out:
+                click.echo(json.dumps(cached, indent=2, ensure_ascii=False))
+            else:
+                click.echo(f"Item {item_key} removed from collection {collection_key} (cached).")
+            return
+
+    writer = build_writer(ctx, cfg, json_out, context="collection")
+    try:
+        writer.remove_from_collection(item_key, collection_key)
+    except ZoteroWriteError as e:
+        emit_error("runtime_error", str(e), output_json=json_out, context="collection remove")
+
+    env = envelope_ok({"item_key": item_key, "collection_key": collection_key})
+    if idempotency_key:
+        store_cached(cache_scope, idempotency_key, env)
+    if json_out:
+        click.echo(json.dumps(env, indent=2, ensure_ascii=False))
+    else:
+        click.echo(f"Item {item_key} removed from collection {collection_key}")
+        click.echo(SYNC_REMINDER)
+
+
 @collection_group.command("delete")
 @click.argument("key")
 @click.option("--dry-run", is_flag=True, help="Show what would be deleted without executing")

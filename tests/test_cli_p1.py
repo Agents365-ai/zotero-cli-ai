@@ -174,6 +174,17 @@ def test_collection_move(mock_writer_cls):
 
 
 @patch("zotero_cli_cc.commands._helpers.ZoteroWriter")
+def test_collection_remove(mock_writer_cls):
+    mock_writer = MagicMock()
+    mock_writer_cls.return_value = mock_writer
+
+    runner = CliRunner()
+    result = runner.invoke(main, ["collection", "remove", "ITEM1", "COLKEY"], env=WRITE_ENV)
+    assert result.exit_code == 0
+    mock_writer.remove_from_collection.assert_called_once_with("ITEM1", "COLKEY")
+
+
+@patch("zotero_cli_cc.commands._helpers.ZoteroWriter")
 def test_collection_delete_dry_run(mock_writer_cls):
     runner = CliRunner()
     result = runner.invoke(main, ["collection", "delete", "COLKEY", "--dry-run"], env=WRITE_ENV)

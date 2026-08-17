@@ -7,6 +7,30 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **The `workspace` concept is gone** — it lasted one release as a synonym for
+  "collection", and two names for one thing was one name too many. Scoped
+  ranked retrieval now lives in `zot search --ranked` and `zot ask
+  --collection`.
+
+### Added
+
+- **`zot search --ranked`** — relevance-ranked results (scores + snippets)
+  from the index-free engine introduced in 0.12.0, with optional
+  `--collection COLL` scope (name or key).
+- **`zot collection remove ITEM COLL`** — remove an item from a collection
+  without deleting it from the library, completing the soft-link membership
+  loop with `collection move`. MCP: new `collection_remove` tool; the
+  `search` tool gained a `ranked` parameter (39 tools total).
+
+### Removed
+
+- **`zot workspace` command group** and the `--workspace` flag on `zot ask`
+  (renamed `--collection`). MCP: the `workspace_query` tool (use `search`
+  with `ranked=True`); the `ask` tool's `workspace` parameter was renamed
+  `collection`.
+
 ## [0.12.0] - 2026-08-17
 
 ### Changed
