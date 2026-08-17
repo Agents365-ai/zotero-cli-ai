@@ -15,7 +15,7 @@ zot note ABC123 --add "这篇论文提出了一种新的注意力机制"
 ```
 
 !!! note "写入操作需要 API 凭据"
-    请参阅 [配置](../getting-started/setup.md#api-credentials) 来设置 API 密钥。
+    请参阅 [配置](../getting-started/setup.md#api) 来设置 API 密钥。
 
 ## 更新笔记
 

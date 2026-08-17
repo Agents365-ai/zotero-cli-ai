@@ -21,13 +21,15 @@ context; open items are tracked here until they're promoted to GitHub Issues.
 - [x] `zot attach KEY --file paper.pdf`: attachment upload
 - [x] `--library group:<id>`: group library support (all commands + MCP tools)
 - [x] `zot add --pdf paper.pdf`: add from local PDF (auto-extract DOI + upload attachment)
-- [x] Semantic search via workspace RAG (BM25 + optional embeddings, v0.2.0)
+- [x] Semantic search via workspace RAG (BM25 + optional embeddings, v0.2.0; removed in v0.12 — replaced by index-free ranked search over Zotero's full-text index)
 - [x] Improve `--help` text with usage examples
 - [x] Shell completion install instructions in README (zsh/bash/fish)
 - [x] `pipx` install instructions
 - [x] GitHub Releases with changelogs
 - [x] README badges: PyPI version, CI status, Python versions, License
-- [x] Expand MCP tools: workspace, cite, stats, update-status (48 tools total)
+- [x] Expand MCP tools: cite, stats, update-status (48 tools at peak; workspace tools removed in v0.13.0 — 39 tools now)
+- [x] `zot collection remove`: remove item from collection (counterpart to `collection move`, v0.13.0)
+- [x] MCP server documentation / integration guide (docs/mcp/: setup, tools reference, Claude Code)
 
 ## Open
 
@@ -36,7 +38,6 @@ context; open items are tracked here until they're promoted to GitHub Issues.
 - [ ] Saved searches CRUD
 - [ ] More export formats: BibLaTeX, MODS, TEI, CSV
 - [ ] Formatted bibliography via citeproc-py with CSL styles
-- [ ] `zot collection remove`: remove item from collection (counterpart to `collection move`)
 - [ ] BetterBibTeX citation key lookup support
 - [ ] DOI-to-key index
 - [ ] Version tracking / incremental sync
@@ -46,4 +47,3 @@ context; open items are tracked here until they're promoted to GitHub Issues.
 ### Polish & Distribution
 
 - [ ] GitHub Issues / Discussions setup for user feedback
-- [ ] MCP server documentation / integration guide
