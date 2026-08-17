@@ -33,9 +33,9 @@ Create a collection for my ICML submission
 → Claude runs: zot collection create "ICML 2026"
 ```
 
-## Workspace Workflow
+## Collection Workflow
 
-A workspace is simply a Zotero collection. A typical research workflow with Claude Code:
+Scope any deep search or question to a Zotero collection. A typical research workflow with Claude Code:
 
 1. **Create a collection** for your project
 2. **Add papers** to it — in the Zotero app, or with `zot collection move`
@@ -46,7 +46,7 @@ Create a collection called "llm-safety" for my alignment papers
 → Claude runs: zot collection create "llm-safety"
 
 What methods do these papers use for reward hacking detection?
-→ Claude runs: zot ask "reward hacking detection methods" --workspace llm-safety
+→ Claude runs: zot ask "reward hacking detection methods" --collection llm-safety
   and synthesizes a cited answer from the returned evidence pack
 ```
 

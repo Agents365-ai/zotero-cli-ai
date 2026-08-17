@@ -6,7 +6,7 @@
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `search` | Search library by title, author, tag, fulltext | `query`, `collection?`, `item_type?`, `sort?`, `limit` |
+| `search` | Search library by title, author, tag, fulltext; `ranked=True` gives relevance-ranked results (scores + snippets, index-free) | `query`, `collection?`, `item_type?`, `sort?`, `limit`, `ranked?` |
 | `list_items` | List all items | `item_type?`, `sort?`, `limit` |
 | `read` | Read item details + notes | `key`, `detail?` |
 | `pdf` | Extract PDF text | `key`, `pages?` |
@@ -43,17 +43,17 @@
 | `tag_remove` | Remove tags from items | `keys`, `tags` |
 | `collection_create` | Create collection | `name`, `parent_key?` |
 | `collection_move` | Move item to collection | `item_key`, `collection_key` |
+| `collection_remove` | Remove item from collection (item stays in library) | `item_key`, `collection_key` |
 | `collection_delete` | Delete collection | `collection_key` |
 | `collection_rename` | Rename collection | `collection_key`, `new_name` |
 | `collection_reorganize` | Batch reorganize | `plan` |
 | `trash_list` | List trashed items | `limit?` |
 | `trash_restore` | Restore from trash | `key` |
 
-## Workspace Tools
+## Ranked Retrieval Tools
 
-A workspace is a Zotero collection — manage membership with the `collection_*` tools above or in the Zotero app. Retrieval is index-free: there is no index to build and results are always fresh.
+Scope retrieval with any Zotero collection — manage membership with the `collection_*` tools above or in the Zotero app. Retrieval is index-free: there is no index to build and results are always fresh. For a plain ranked result list without evidence passages, use `search` with `ranked=True`.
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
-| `workspace_query` | Rank papers by relevance to a question (returns ranked items with snippets) | `question`, `workspace?`, `top_k?` |
-| `ask` | Citation-keyed evidence pack (metadata + PDF passages) plus answer instructions; the agent synthesizes the answer — zot never calls an LLM | `question`, `workspace?`, `evidence_k?` |
+| `ask` | Citation-keyed evidence pack (metadata + PDF passages) plus answer instructions; the agent synthesizes the answer — zot never calls an LLM | `question`, `collection?`, `evidence_k?` |

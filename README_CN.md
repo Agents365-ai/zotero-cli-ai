@@ -74,7 +74,7 @@ cp -r skill/zotero-cli ~/.claude/skills/
 | 笔记、标签、引用 | [笔记与标签](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/notes-tags/)、[引用导出](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/citations/) |
 | 增 / 改 / 删条目 | [条目管理](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/item-management/) |
 | 分类（Collection） | [Collections](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/collections/) |
-| 工作空间（即 Collection） | [Workspace](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/workspace/) |
+| 排序检索与问答（Collection） | [搜索指南](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/search/) |
 | PDF 提取 | [PDF](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/pdf/) |
 | 预印本 → 已发表 | [update-status](https://agents365-ai.github.io/zotero-cli-ai/zh/guide/update-status/) |
 | MCP 配置与工具 | [MCP](https://agents365-ai.github.io/zotero-cli-ai/zh/mcp/setup/) |

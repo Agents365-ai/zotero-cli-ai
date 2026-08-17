@@ -71,7 +71,6 @@ nav:
     - Collections: guide/collections.md
     - Citations & Export: guide/citations.md
     - PDF: guide/pdf.md
-    - Workspaces: guide/workspace.md
     - Item Management: guide/item-management.md
     - Preprint Status: guide/update-status.md
   - MCP Server:

@@ -1,39 +1,41 @@
-# Workspaces
+# Ranked Search & Ask
 
-A workspace is simply a Zotero collection. `zot` stores nothing locally — no
-workspace files, no index. Membership lives in Zotero and queries run live, so
-results are always fresh.
+Ranked retrieval runs over your whole library or any Zotero collection. `zot`
+stores nothing locally — no index to build, no local state. Collection
+membership lives in Zotero and queries run live, so results are always fresh.
 
-## Managing Workspaces
+## Scoping to a Collection
 
-Curate membership in the Zotero app (drag & drop items into a collection), or
-via the CLI:
+Curate membership in the Zotero app (drag & drop items into a collection, or
+remove them from it), or via the CLI:
 
 ```bash
 zot --json collection list                       # find collection keys
 zot collection create "LLM Safety"
-zot collection move ITEMKEY COLLECTIONKEY
+zot collection move ITEMKEY COLLECTIONKEY        # add an item to a collection
+zot collection remove ITEMKEY COLLECTIONKEY      # remove an item (item stays in the library)
 zot --json collection items COLLECTIONKEY
 zot collection delete COLLECTIONKEY
 ```
 
-Wherever `--workspace` is accepted, pass a collection name or key — nested
+Wherever `--collection` is accepted, pass a collection name or key — nested
 collections resolve by name too.
 
-## Ranked Search: `zot workspace query`
+## Ranked Search: `zot search --ranked`
 
 ```bash
-zot workspace query "reward hacking"                            # whole library
-zot workspace query "RLHF methods" --workspace "LLM Safety" --top-k 10
-zot --json workspace query "attention" --workspace "LLM Safety"
+zot search --ranked "reward hacking"                                # whole library
+zot search --ranked "RLHF methods" --collection "LLM Safety" --limit 10
+zot --json search --ranked "attention" --collection "LLM Safety"
 ```
 
-`--workspace` is optional; omit it to search the whole library. JSON output:
+`--collection` is optional; omit it to search the whole library. `--ranked`
+ignores `--sort`/`--type`/`--stream`. JSON output:
 
 ```json
 {
   "query": "reward hacking",
-  "workspace": "LLM Safety",
+  "collection": "LLM Safety",
   "results": [
     {
       "rank": 1,
@@ -52,15 +54,15 @@ zot --json workspace query "attention" --workspace "LLM Safety"
 ## Evidence Packs: `zot ask`
 
 ```bash
-zot ask "how does attention scale?"                             # whole library
-zot --json ask "what dataset was used?" --workspace papers --evidence-k 8
+zot ask "how does attention scale?"                                 # whole library
+zot --json ask "what dataset was used?" --collection papers --evidence-k 8
 ```
 
-`--evidence-k` defaults to 12. Returns a citation-keyed evidence pack
-(`mode: "index-free"`): each entry has `cite_key` (Zotero item key), `source`
-(`metadata` or `pdf`), `text`, and `scores`, plus `answer_instructions`.
-`zot` never calls an LLM — the agent synthesizes a grounded answer from the
-evidence and cites by `cite_key`.
+`--evidence-k` defaults to 12. Returns a citation-keyed evidence pack:
+`{question, collection, mode: "index-free", evidence: [{cite_key, source,
+text, scores}], answer_instructions}` where `cite_key` is the Zotero item key
+and `source` is `metadata` or `pdf`. `zot` never calls an LLM — the agent
+synthesizes a grounded answer from the evidence and cites by `cite_key`.
 
 ## How Retrieval Works
 
@@ -86,11 +88,4 @@ zot --json pdf --outline ITEMKEY            # Get numbered section headings
 zot --json pdf --section N ITEMKEY          # Extract content under the N-th heading
 ```
 
-## Migrating From Old Local Workspaces
-
-Earlier versions kept local workspaces under `~/.config/zot/workspaces/`
-(JSON membership files plus `*.idx.sqlite` RAG indexes) and required a
-`zot workspace index` step. Both are gone — that directory is no longer used
-and can be deleted. Recreate the same paper sets as Zotero collections (in the
-app, or with `zot collection create` + `zot collection move`), then query with
-`zot workspace query` / `zot ask --workspace <collection>`.
+> **Migration:** the pre-0.13 `zot workspace` command group was removed — its functionality lives in `zot search --ranked` and `zot ask --collection`.

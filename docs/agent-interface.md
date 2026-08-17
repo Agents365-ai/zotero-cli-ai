@@ -571,26 +571,26 @@ stdout:
 
 Agents tail stderr for liveness; stdout remains a single clean envelope.
 
-## Workspace query & ask
+## Ranked search & ask
 
-A workspace is a Zotero collection — there is no local workspace store and no
-index to build. Retrieval is index-free and runs live against Zotero's own
-full-text index, so results are always fresh:
+Ranked retrieval runs live against Zotero's own full-text index — there is no
+index to build and results are always fresh. Scope it with any Zotero
+collection; without `--collection` the whole library is searched:
 
 ```bash
-zot workspace query "reward hacking"                           # whole library
-zot workspace query "reward hacking" --workspace my-project    # scope to a collection
-zot workspace query "reward hacking" --workspace my-project --top-k 10
+zot search "reward hacking" --ranked                          # whole library
+zot search "reward hacking" --ranked --collection my-project  # scope to a collection
+zot search "reward hacking" --ranked --collection my-project --limit 10
 ```
 
-Query JSON output:
+Ranked JSON output:
 
 ```json
 {
   "ok": true,
   "data": {
     "query": "reward hacking",
-    "workspace": "my-project",
+    "collection": "my-project",
     "results": [
       {
         "rank": 1,
@@ -614,7 +614,7 @@ the answer from `evidence`, following `answer_instructions`:
 
 ```bash
 zot ask "how does attention scale?"
-zot ask "what dataset was used?" --workspace papers --evidence-k 8
+zot ask "what dataset was used?" --collection papers --evidence-k 8
 ```
 
 ```json
@@ -622,7 +622,7 @@ zot ask "what dataset was used?" --workspace papers --evidence-k 8
   "ok": true,
   "data": {
     "question": "what dataset was used?",
-    "workspace": "papers",
+    "collection": "papers",
     "mode": "index-free",
     "evidence": [
       { "cite_key": "ABC123", "source": "metadata", "text": "Title: ...", "scores": { "rrf": 0.0328, "fulltext": 4.5612, "metadata": 2.0 } },
@@ -637,7 +637,7 @@ zot ask "what dataset was used?" --workspace papers --evidence-k 8
 Stage 1 scores items with idf-weighted term coverage from Zotero's full-text
 index tables, fused with metadata matching (title/abstract/creators/tags/notes)
 via reciprocal rank fusion. For `ask`, stage 2 additionally extracts PDF
-passages on the fly around the query terms (pdfium, cached). `--workspace`
+passages on the fly around the query terms (pdfium, cached). `--collection`
 takes a collection name or key; omitting it searches the whole library.
 
 ## Auth delegation

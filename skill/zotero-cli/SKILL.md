@@ -1,6 +1,6 @@
 ---
 name: zotero-cli
-description: Use when user mentions papers, references, citations, Zotero, literature, bibliography, workspaces, or needs to search, read, export, or organize documents. Handles all zot CLI operations including ranked search over Zotero collections.
+description: Use when user mentions papers, references, citations, Zotero, literature, bibliography, or needs to search, read, export, or organize documents. Handles all zot CLI operations including ranked search over Zotero collections.
 ---
 
 # Zotero CLI Skill
@@ -15,7 +15,7 @@ zot --detail minimal search "transformer attention"     # Search papers (minimal
 zot --detail full search "transformer attention"        # Search papers (full output)
 zot --json read ABC123                                  # View paper details (JSON)
 zot export ABC123                                       # Export BibTeX
-zot workspace query "RLHF" --workspace my-collection    # Ranked search scoped to a collection
+zot --json search --ranked "RLHF" --collection my-collection  # Ranked search scoped to a collection
 ```
 
 ## Critical Rules
@@ -52,12 +52,13 @@ zot workspace query "RLHF" --workspace my-collection    # Ranked search scoped t
 | Find duplicates | `zot --json duplicates` |
 | Recent items | `zot --json recent --days 7` |
 | Library stats | `zot --json stats` |
-| Collection create (= workspace) | `zot collection create "NAME"` |
-| Ranked deep search | `zot --json workspace query "q" --workspace COLL` |
-| Ask (evidence pack) | `zot --json ask "question" --workspace COLL` |
+| Collection create | `zot collection create "NAME"` |
+| Remove item from collection | `zot collection remove ITEM COLL` |
+| Ranked deep search | `zot --json search --ranked "q" --collection COLL` |
+| Ask (evidence pack) | `zot --json ask "question" --collection COLL` |
 | Group library | `zot --library group:ID search "q"` |
 
-**Rule of thumb**: `zot search` for quick metadata + full-text lookups. `zot workspace query` for ranked deep search, optionally scoped to a collection (a workspace *is* a Zotero collection — no index to build). `zot ask` when you need a citation-keyed evidence pack to write a grounded answer — it returns chunks tagged with their Zotero item key plus `answer_instructions`; `zot` does not call an LLM, so *you* synthesize and cite the answer from the evidence.
+**Rule of thumb**: `zot search` for quick metadata + full-text lookups. `zot search --ranked` for relevance-ranked deep search with scores and snippets, optionally scoped to a collection via `--collection`. `zot ask` when you need a citation-keyed evidence pack to write a grounded answer — it returns chunks tagged with their Zotero item key plus `answer_instructions`; `zot` does not call an LLM, so *you* synthesize and cite the answer from the evidence.
 
 ## Global Flags
 
@@ -80,6 +81,6 @@ zot workspace query "RLHF" --workspace my-collection    # Ranked search scoped t
 ## References
 
 - `references/commands.md` — Full command reference with examples
-- `references/workspaces.md` — Workspaces (Zotero collections) and ranked retrieval
+- `references/ranked-search.md` — Ranked search and evidence packs over collections
 - `references/workflows.md` — Common multi-step workflow patterns
 - `references/windows-encoding.md` — Windows CJK encoding fix
