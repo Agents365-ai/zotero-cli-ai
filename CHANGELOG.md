@@ -7,6 +7,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Local reads against a running Zotero 10** — Zotero 10 holds
+  `PRAGMA locking_mode=EXCLUSIVE` with `journal_mode=WAL` on zotero.sqlite for
+  the app's whole lifetime, so no external process can open the database even
+  read-only, and the previous `immutable=1` workaround bypassed the lock but
+  silently skipped the WAL, returning stale data. The local reader now opens
+  zotero.sqlite read-only and WAL-aware when Zotero is closed (reads are
+  live), and while Zotero is running falls back to a consistent snapshot — a
+  copy of zotero.sqlite plus its WAL, replayed by SQLite on open and reused
+  for the reader's lifetime. Snapshot temp files are removed when the reader
+  closes.
+
 ## [0.13.0] - 2026-08-17
 
 ### Changed
