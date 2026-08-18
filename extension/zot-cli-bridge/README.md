@@ -1,6 +1,6 @@
 # Zot CLI Bridge — Zotero plugin
 
-A tiny Zotero 7 plugin that exposes Zotero's built-in **"Find Full Text"** over
+A tiny Zotero plugin (Zotero 7–10) that exposes Zotero's built-in **"Find Full Text"** over
 the desktop's local HTTP server, so the [`zot`](../..) CLI (and AI agents
 driving it) can trigger PDF retrieval without leaving the terminal.
 
@@ -51,7 +51,7 @@ zot bridge status        # verify -> Bridge OK
 
    ```bash
    curl http://127.0.0.1:23119/zot-cli/ping
-   # {"ok": true, "bridge_version": "0.4.0", "zotero_version": "9.x.y", ...}
+   # {"ok": true, "bridge_version": "0.4.1", "zotero_version": "10.x.y", ...}
    ```
 
 You can now run `zot find-pdf <item-key>` and `zot attach <key> --file <path> --via-bridge` from the parent repo.
