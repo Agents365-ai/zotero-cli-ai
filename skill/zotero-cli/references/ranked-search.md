@@ -68,8 +68,8 @@ synthesizes a grounded answer from the evidence and cites by `cite_key`.
 
 Index-free two-stage ranking — nothing to build or maintain:
 
-1. **Stage 1** scores items with idf-weighted term coverage from Zotero's own
-   full-text index tables (the same index the Zotero app builds), fused via
+1. **Stage 1** scores items with FTS5 bm25 against Zotero 10's own full-text
+   index (`fulltext.sqlite` — the same index the Zotero app builds), fused via
    reciprocal rank fusion with metadata matching (title/abstract/creators/
    tags/notes).
 2. **Stage 2** (`ask` only) extracts PDF passages on the fly around query

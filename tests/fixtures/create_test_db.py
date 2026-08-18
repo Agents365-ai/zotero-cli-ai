@@ -1,10 +1,15 @@
-"""Generate a minimal Zotero-compatible SQLite test fixture."""
+"""Generate a minimal Zotero-compatible SQLite test fixture.
+
+Creates zotero.sqlite plus the companion fulltext.sqlite (Zotero 10's FTS5
+full-text index) in the fixtures directory.
+"""
 
 import sqlite3
 from pathlib import Path
 
 FIXTURE_DIR = Path(__file__).parent
 DB_PATH = FIXTURE_DIR / "zotero.sqlite"
+FT_DB_PATH = FIXTURE_DIR / "fulltext.sqlite"
 
 
 def create_test_db() -> None:
@@ -84,8 +89,6 @@ def create_test_db() -> None:
         CREATE TABLE relationPredicates (predicateID INTEGER PRIMARY KEY, predicate TEXT NOT NULL UNIQUE);
         INSERT INTO relationPredicates VALUES (1, 'dc:relation');
 
-        CREATE TABLE fulltextItemWords (wordID INT NOT NULL, itemID INT NOT NULL, PRIMARY KEY (wordID, itemID));
-        CREATE TABLE fulltextWords (wordID INTEGER PRIMARY KEY, word TEXT NOT NULL UNIQUE);
         CREATE TABLE fulltextItems (
             itemID INTEGER PRIMARY KEY,
             indexedPages INT,
@@ -189,13 +192,8 @@ def create_test_db() -> None:
     # Relations: item 1 and item 2 are related
     c.execute("INSERT INTO itemRelations VALUES (1, 1, 'http://zotero.org/users/local/BERT002')")
 
-    # Fulltext index for item 1
-    c.execute("INSERT INTO fulltextWords VALUES (1, 'transformer')")
-    c.execute("INSERT INTO fulltextWords VALUES (2, 'attention')")
-    c.execute("INSERT INTO fulltextWords VALUES (3, 'mechanism')")
-    c.execute("INSERT INTO fulltextItemWords VALUES (1, 5)")  # attachment itemID
-    c.execute("INSERT INTO fulltextItemWords VALUES (2, 5)")
-    c.execute("INSERT INTO fulltextItemWords VALUES (3, 5)")
+    # Legacy per-page stats row for attachment 5 (full text itself is indexed
+    # in fulltext.sqlite — see create_fulltext_db below)
     c.execute("INSERT INTO fulltextItems VALUES (5, 10, 10, 5000, 5000, 1, 0)")
 
     # Item 7: Trashed item "Old Survey Paper"
@@ -227,8 +225,6 @@ def create_test_db() -> None:
     # Item 10: Attachment for group item (for fulltext search isolation test)
     c.execute("INSERT INTO items VALUES (10, 3, '2024-06-01', '2024-06-02', '2024-06-02', 2, 'GRPATT10')")
     c.execute("INSERT INTO itemAttachments VALUES (10, 9, 0, 'application/pdf', NULL, 'storage:protein.pdf')")
-    c.execute("INSERT INTO fulltextWords VALUES (4, 'protein')")
-    c.execute("INSERT INTO fulltextItemWords VALUES (4, 10)")  # group attachment
     c.execute("INSERT INTO fulltextItems VALUES (10, 8, 8, 4000, 4000, 1, 0)")
 
     # Group collection
@@ -252,10 +248,84 @@ def create_test_db() -> None:
     c.execute("INSERT INTO items VALUES (13, 14, '2015-01-01', '2015-01-01', '2015-01-01', 1, 'ATCH013')")
     c.execute("INSERT INTO itemAttachments VALUES (13, 11, 0, 'application/pdf', NULL, 'storage:original.pdf')")
 
+    # Item 14: CJK paper whose full text (not title) contains 自然语言处理 —
+    # exercises the fulltextContentCJK bigram path (see create_fulltext_db)
+    c.execute("INSERT INTO items VALUES (14, 2, '2024-07-01', '2024-07-02', '2024-07-02', 1, 'CJKX014')")
+    c.execute("INSERT INTO itemDataValues VALUES (23, '计算语言学论文')")
+    c.execute("INSERT INTO itemData VALUES (14, 4, 23)")  # title
+    c.execute("INSERT INTO items VALUES (15, 14, '2024-07-01', '2024-07-01', '2024-07-01', 1, 'ATCH015')")
+    c.execute("INSERT INTO itemAttachments VALUES (15, 14, 0, 'application/pdf', NULL, 'storage:cjk.pdf')")
+
     conn.commit()
     conn.close()
     print(f"Created test DB at {DB_PATH}")
 
 
+def create_fulltext_db() -> None:
+    """Create the companion fulltext.sqlite — Zotero 10's FTS5 full-text index.
+
+    Schema mirrors a real Zotero 10 data directory: contentless FTS5 tables
+    keyed by attachment itemID, plus the per-attachment index-state table.
+    Indexed text is stored normalized (lowercased) like Zotero's indexer does;
+    inserting (rowid, text) works on contentless tables for indexing.
+    """
+    if FT_DB_PATH.exists():
+        FT_DB_PATH.unlink()
+
+    conn = sqlite3.connect(str(FT_DB_PATH))
+    c = conn.cursor()
+    c.executescript("""
+        CREATE VIRTUAL TABLE fulltextContent USING fts5(text, tokenize='unicode61', content='', contentless_delete=1);
+        CREATE VIRTUAL TABLE fulltextContentCJK USING fts5(text, tokenize='ascii', content='', contentless_delete=1);
+        CREATE VIRTUAL TABLE fulltextNotes USING fts5(text, tokenize='trigram', content='', contentless_delete=1);
+        CREATE VIRTUAL TABLE fulltextNotesCJK USING fts5(text, tokenize='ascii', content='', contentless_delete=1);
+        CREATE TABLE fulltextIndexState (itemID INTEGER PRIMARY KEY, version INT NOT NULL);
+        CREATE TABLE fulltextNoteIndexState (itemID INTEGER PRIMARY KEY, version INT NOT NULL);
+        CREATE INDEX fulltextNoteIndexState_stale ON fulltextNoteIndexState(itemID) WHERE version=0;
+        CREATE TABLE noteText (itemID INTEGER PRIMARY KEY, text TEXT);
+        CREATE TABLE fulltextIndexMeta (key TEXT PRIMARY KEY, value NOT NULL);
+    """)
+
+    # Attachment 5 (ATTN001's PDF): 'transformer', 'attention', 'mechanism'
+    c.execute(
+        "INSERT INTO fulltextContent (rowid, text) VALUES (5, ?)",
+        ("the transformer architecture is based on attention; the attention mechanism scales",),
+    )
+    c.execute("INSERT INTO fulltextIndexState VALUES (5, 1)")
+
+    # Attachment 10 (group library item GRPITM09's PDF): 'protein'
+    c.execute(
+        "INSERT INTO fulltextContent (rowid, text) VALUES (10, ?)",
+        ("protein folding with deep residual networks",),
+    )
+    c.execute("INSERT INTO fulltextIndexState VALUES (10, 1)")
+
+    # Attachment 13: indexed content but stale index state (version 0) — must
+    # NOT count as indexed (Zotero re-indexes those in the background)
+    c.execute(
+        "INSERT INTO fulltextContent (rowid, text) VALUES (13, ?)",
+        ("blockchain consensus protocols",),
+    )
+    c.execute("INSERT INTO fulltextIndexState VALUES (13, 0)")
+
+    # Attachment 15 (CJKX014's PDF): CJK text. The word index stores the
+    # normalized text (a CJK run is a single unicode61 token); the
+    # ascii-tokenized CJK index stores the run's overlapping 2-grams.
+    c.execute(
+        "INSERT INTO fulltextContent (rowid, text) VALUES (15, ?)",
+        ("本文讨论自然语言处理的若干方法",),
+    )
+    c.execute(
+        "INSERT INTO fulltextContentCJK (rowid, text) VALUES (15, ?)",
+        ("本文 文讨 讨论 论自 自然 然语 语言 言处 处理 的若 若干 干方 方法",),
+    )
+    c.execute("INSERT INTO fulltextIndexState VALUES (15, 1)")
+
+    conn.commit()
+    conn.close()
+    print(f"Created test full-text DB at {FT_DB_PATH}")
+
+
 if __name__ == "__main__":
     create_test_db()
+    create_fulltext_db()

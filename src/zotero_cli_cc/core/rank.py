@@ -2,11 +2,12 @@
 
 Two-stage, no embeddings, no pre-built index:
 
-- Stage 1 scores every item in scope with idf-weighted term coverage from
-  Zotero's ``fulltextWords``/``fulltextItemWords`` tables (term frequencies
-  are binary — Zotero stores unique (word, item) pairs — with document
-  length normalisation via ``fulltextItems.indexedChars``), fused with a
-  metadata LIKE ranking (title/abstract/creators/tags/notes) via RRF.
+- Stage 1 scores every item in scope with FTS5 bm25 from Zotero 10's
+  ``fulltext.sqlite`` (MATCH clauses built like the app's own fulltextContent
+  search condition — see ``core.fts``), fused with a metadata LIKE ranking
+  (title/abstract/creators/tags/notes) via RRF. Data directories without
+  ``fulltext.sqlite`` (pre-Zotero 10) degrade to metadata-only scoring with a
+  warning.
 - Stage 2 (``build_ask_evidence``) re-ranks the top items by real term
   frequency from on-the-fly PDF text extraction (cached in PdfCache) and
   carves evidence passages around query-term hits.
@@ -14,12 +15,13 @@ Two-stage, no embeddings, no pre-built index:
 
 from __future__ import annotations
 
-import math
 import re
+import warnings
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from zotero_cli_cc.core.fts import content_match_clause
 from zotero_cli_cc.core.pdf_cache import PdfCache
 from zotero_cli_cc.core.pdf_extractor import get_extractor
 
@@ -27,9 +29,6 @@ if TYPE_CHECKING:
     from zotero_cli_cc.core.reader import ZoteroReader
     from zotero_cli_cc.models import Collection, Item
 
-# BM25 tuning (same constants the old chunk index used)
-_K1 = 1.5
-_B = 0.75
 # Cap on PDFs extracted per ask call (first-N ranked items with a PDF)
 _MAX_PDF_ITEMS = 5
 _IN_BATCH = 900
@@ -140,60 +139,51 @@ def _fulltext_scores(
     terms: list[str],
     collection_key: str | None,
 ) -> dict[str, float]:
-    """idf-weighted term coverage per parent item, from Zotero's full-text index.
+    """bm25 scores per parent item, from Zotero 10's FTS5 full-text index.
 
-    Zotero stores unique (wordID, itemID) pairs, so term frequency is binary;
-    document length comes from fulltextItems.indexedChars. An item with
-    several indexed attachments gets the max of its attachment scores.
+    Each term becomes a MATCH clause built like Zotero 10's own
+    fulltextContent search condition (see ``core.fts``); each table's clauses
+    are OR-ed into one MATCH query scored with ``bm25()``, negated so higher
+    is better. Only indexed in-scope attachments are considered (see
+    ``reader.fulltext_candidates``); an item with several indexed attachments
+    gets the max of its attachment scores.
     """
+    matches: dict[str, list[str]] = {}
+    for term in terms:
+        clause = content_match_clause(term)
+        if clause is not None:
+            table, match = clause
+            matches.setdefault(table, []).append(match)
+    if not matches:
+        return {}
+    ft = reader._connect_fulltext()
+    if ft is None:
+        warnings.warn(
+            "fulltext.sqlite not found next to zotero.sqlite — full-text scoring "
+            "is unavailable before Zotero 10; ranking degrades to metadata-only.",
+            stacklevel=2,
+        )
+        return {}
     candidates = reader.fulltext_candidates(collection_key)
     if not candidates:
         return {}
-    att_to_parent: dict[int, str] = {}
-    att_len: dict[int, int] = {}
-    for parent_key, att_id, chars in candidates:
-        att_to_parent[att_id] = parent_key
-        att_len[att_id] = max(chars, 1)
+    att_to_parent = {att_id: parent_key for parent_key, att_id in candidates}
     att_ids = sorted(att_to_parent)
-    n_docs = len(att_ids)
-    avg_dl = sum(att_len.values()) / n_docs
-
-    conn = reader._connect()
-    word_ids: dict[str, int] = {}
-    for batch in _batches(terms):
-        placeholders = ",".join("?" * len(batch))
-        rows = conn.execute(
-            f"SELECT wordID, word FROM fulltextWords WHERE word IN ({placeholders})",
-            batch,
-        ).fetchall()
-        word_ids.update({r["word"]: r["wordID"] for r in rows})
-    matched_ids = sorted(word_ids.values())
-    if not matched_ids:
-        return {}
-
-    # Fetch matching (wordID, itemID) pairs once, then aggregate in Python:
-    # df per term, and per-attachment idf sum with length normalisation.
-    pairs: set[tuple[int, int]] = set()
-    for w_batch in _batches(matched_ids):
-        w_ph = ",".join("?" * len(w_batch))
-        for a_batch in _batches(att_ids):
-            a_ph = ",".join("?" * len(a_batch))
-            rows = conn.execute(
-                f"SELECT wordID, itemID FROM fulltextItemWords WHERE wordID IN ({w_ph}) AND itemID IN ({a_ph})",
-                (*w_batch, *a_batch),
-            ).fetchall()
-            pairs.update((r["wordID"], r["itemID"]) for r in rows)
-
-    df: dict[int, int] = {}
-    for word_id, _item_id in pairs:
-        df[word_id] = df.get(word_id, 0) + 1
-    idf = {wid: math.log((n_docs - d + 0.5) / (d + 0.5) + 1) for wid, d in df.items()}
 
     att_score: dict[int, float] = {}
-    for word_id, item_id in pairs:
-        dl_norm = 1 - _B + _B * att_len[item_id] / avg_dl
-        tf_factor = (_K1 + 1) / (1 + _K1 * dl_norm)  # tf = 1 (binary)
-        att_score[item_id] = att_score.get(item_id, 0.0) + idf[word_id] * tf_factor
+    for table, exprs in matches.items():
+        match_expr = " OR ".join(exprs)
+        for a_batch in _batches(att_ids):
+            a_ph = ",".join("?" * len(a_batch))
+            rows = ft.execute(
+                f"SELECT rowid, bm25({table}) AS score FROM {table} WHERE {table} MATCH ? AND rowid IN ({a_ph})",
+                (match_expr, *a_batch),
+            ).fetchall()
+            # bm25 scores are corpus-global, so batches are comparable; lower
+            # (more negative) is better, hence the negation.
+            for r in rows:
+                score = -r["score"]
+                att_score[r["rowid"]] = max(att_score.get(r["rowid"], 0.0), score)
 
     scores: dict[str, float] = {}
     for att_id, score in att_score.items():

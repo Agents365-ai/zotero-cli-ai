@@ -7,6 +7,20 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **Ranked retrieval now uses Zotero 10's FTS5 full-text index** — Zotero 10
+  moved the full-text index out of zotero.sqlite into a separate
+  `fulltext.sqlite` (contentless FTS5 tables) and dropped the legacy
+  `fulltextWords`/`fulltextItemWords` tables the ranker and `zot search`'s
+  full-text matching relied on. `zot search --ranked`, `zot ask`, and the MCP
+  `search`/`ask` tools now score full text with `bm25()` against
+  `fulltextContent` (pure-CJK terms route to `fulltextContentCJK` as 2-gram
+  phrases), with MATCH expressions built the way the Zotero 10 app builds
+  them. On pre-Zotero 10 data directories (no `fulltext.sqlite`) full-text
+  scoring degrades to metadata-only matching with a warning; the legacy
+  `fulltextWords` code path is gone.
+
 ### Fixed
 
 - **Local reads against a running Zotero 10** — Zotero 10 holds

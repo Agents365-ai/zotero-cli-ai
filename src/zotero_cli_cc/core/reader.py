@@ -12,6 +12,7 @@ from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
+from zotero_cli_cc.core.fts import CONTENT_INDEX_VERSION, content_match_clause
 from zotero_cli_cc.models import (
     Attachment,
     Collection,
@@ -38,6 +39,10 @@ MAX_SCHEMA_VERSION = 200
 # PRAGMA locking_mode=EXCLUSIVE on zotero.sqlite for the app's whole lifetime,
 # so a locked database never clears — fail fast and fall back to a snapshot.
 _CONNECT_BUSY_TIMEOUT_S = 1.5
+
+# Busy timeout for fulltext.sqlite reads. Zotero 10 does not lock this
+# database exclusively, but its indexer writes in bursts — wait those out.
+_FULLTEXT_BUSY_TIMEOUT_S = 5.0
 
 # SQLITE_MAX_VARIABLE_NUMBER can be as low as 999 on older SQLite builds, so
 # large IN (...) parameter lists are executed in batches. Sorted queries keep a
@@ -77,10 +82,20 @@ class ZoteroReader:
       close and reopen the Reader to refresh.
     """
 
-    def __init__(self, db_path: Path, library_id: int = 1, prefs_js_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        db_path: Path,
+        library_id: int = 1,
+        prefs_js_path: Path | None = None,
+        fulltext_db_path: Path | None = None,
+    ) -> None:
         self._db_path = db_path
         self._library_id = library_id
+        # Zotero 10's FTS5 full-text index lives next to zotero.sqlite.
+        self._fulltext_db_path = fulltext_db_path or db_path.with_name("fulltext.sqlite")
         self._conn: sqlite3.Connection | None = None
+        self._ft_conn: sqlite3.Connection | None = None
+        self._ft_checked = False
         self._tmp_dir: Path | None = None
         self._excluded_sql: str | None = None
         self._excluded_ids: tuple[int, ...] | None = None
@@ -119,6 +134,37 @@ class ZoteroReader:
             # Locked (Zotero 10 holds an exclusive lock while running) or
             # otherwise unreadable — fall back to a snapshot copy of DB + WAL.
             return self._connect_from_snapshot()
+
+    def _connect_fulltext(self) -> sqlite3.Connection | None:
+        """Open Zotero 10's FTS5 full-text index (fulltext.sqlite), if present.
+
+        Unlike zotero.sqlite, fulltext.sqlite is not exclusively locked while
+        Zotero 10 runs, so a plain read-only open suffices; the busy timeout
+        rides out the indexer reindexing write bursts. Returns None when the
+        file is absent (pre-Zotero 10 data directories) or unreadable. The
+        result (including a miss) is cached until close().
+        """
+        if self._ft_checked:
+            return self._ft_conn
+        self._ft_checked = True
+        if not self._fulltext_db_path.exists():
+            return None
+        uri_path = urllib.parse.quote(self._fulltext_db_path.as_posix())
+        conn: sqlite3.Connection | None = None
+        try:
+            conn = sqlite3.connect(
+                f"file:{uri_path}?mode=ro",
+                uri=True,
+                timeout=_FULLTEXT_BUSY_TIMEOUT_S,
+            )
+            conn.row_factory = sqlite3.Row
+            conn.execute("SELECT 1 FROM fulltextIndexState LIMIT 1")
+        except sqlite3.OperationalError:
+            if conn is not None:
+                conn.close()
+            return None
+        self._ft_conn = conn
+        return conn
 
     def _get_excluded_ids(self) -> tuple[int, ...]:
         """Look up excluded type IDs by name (cached after first call)."""
@@ -212,6 +258,10 @@ class ZoteroReader:
         if self._conn:
             self._conn.close()
             self._conn = None
+        if self._ft_conn:
+            self._ft_conn.close()
+            self._ft_conn = None
+        self._ft_checked = False
         if hasattr(self, "_tmp_dir_obj") and self._tmp_dir_obj is not None:
             self._tmp_dir_obj.cleanup()
             self._tmp_dir_obj = None
@@ -348,16 +398,9 @@ class ZoteroReader:
                 ).fetchall()
                 w_ids.update(r["itemID"] for r in rows)
 
-                # Fulltext
-                rows = conn.execute(
-                    "SELECT DISTINCT ia.parentItemID FROM fulltextItemWords fw "
-                    "JOIN fulltextWords w ON fw.wordID = w.wordID "
-                    "JOIN itemAttachments ia ON fw.itemID = ia.itemID "
-                    "JOIN items i ON ia.parentItemID = i.itemID "
-                    f"WHERE w.word LIKE ? AND ia.parentItemID IS NOT NULL AND i.itemTypeID {excl_sql} {lib_sql}",
-                    (pat, *excl_params, *lib_params),
-                ).fetchall()
-                w_ids.update(r["parentItemID"] for r in rows)
+                # Fulltext (Zotero 10's FTS5 index; skipped when fulltext.sqlite
+                # is absent, e.g. pre-Zotero 10 data directories)
+                w_ids.update(self._fulltext_parent_ids(w, excl_sql, excl_params, lib_sql, lib_params))
 
                 word_sets.append(w_ids)
 
@@ -796,14 +839,67 @@ class ZoteroReader:
         attachments = self.get_pdf_attachments(key, skip_tags=skip_tags)
         return attachments[0] if attachments else None
 
-    def fulltext_candidates(self, collection_key: str | None = None) -> list[tuple[str, int, int]]:
-        """Return (parent_item_key, attachment_itemID, indexedChars) for indexed attachments.
+    def _fulltext_parent_ids(
+        self,
+        term: str,
+        excl_sql: str,
+        excl_params: tuple[int, ...],
+        lib_sql: str,
+        lib_params: tuple[int, ...],
+    ) -> set[int]:
+        """Parent itemIDs whose attachments' indexed full text matches `term`.
 
-        Used by `core.rank` for index-free full-text ranking over Zotero's own
-        fulltext* tables. `collection_key` restricts the scope to that
-        collection's items. Returns [] when the database has no full-text index
-        tables (very old schema) or nothing in scope is indexed.
+        The term is resolved to an FTS5 MATCH clause the way Zotero 10 builds
+        it (see core.fts); terms the index can't answer and data directories
+        without fulltext.sqlite yield an empty set.
         """
+        ft = self._connect_fulltext()
+        if ft is None:
+            return set()
+        clause = content_match_clause(term)
+        if clause is None:
+            return set()
+        table, match = clause
+        rows = ft.execute(f"SELECT rowid FROM {table} WHERE {table} MATCH ?", (match,)).fetchall()
+        if not rows:
+            return set()
+        att_ids = [r["rowid"] for r in rows]
+        conn = self._connect()
+        parent_ids: set[int] = set()
+        for batch in _in_batches(att_ids):
+            placeholders = ",".join("?" * len(batch))
+            prows = conn.execute(
+                "SELECT DISTINCT ia.parentItemID FROM itemAttachments ia "
+                "JOIN items i ON ia.parentItemID = i.itemID "
+                f"WHERE ia.itemID IN ({placeholders}) AND ia.parentItemID IS NOT NULL "
+                f"AND i.itemTypeID {excl_sql} {lib_sql}",
+                (*batch, *excl_params, *lib_params),
+            ).fetchall()
+            parent_ids.update(r["parentItemID"] for r in prows)
+        return parent_ids
+
+    def fulltext_candidates(self, collection_key: str | None = None) -> list[tuple[str, int]]:
+        """Return (parent_item_key, attachment_itemID) for indexed attachments.
+
+        "Indexed" follows Zotero 10's semantics: the attachment has a
+        fulltextIndexState row at the current content index version (see
+        core.fts.CONTENT_INDEX_VERSION). Used by `core.rank` for full-text
+        ranking over fulltext.sqlite. `collection_key` restricts the scope to
+        that collection's items. Returns [] when there is no fulltext.sqlite
+        (pre-Zotero 10 data directories) or nothing in scope is indexed.
+        """
+        ft = self._connect_fulltext()
+        if ft is None:
+            return []
+        indexed = {
+            r["itemID"]
+            for r in ft.execute(
+                "SELECT itemID FROM fulltextIndexState WHERE version >= ?",
+                (CONTENT_INDEX_VERSION,),
+            ).fetchall()
+        }
+        if not indexed:
+            return []
         conn = self._connect()
         col_sql = ""
         col_params: tuple = ()
@@ -816,19 +912,15 @@ class ZoteroReader:
                 return []
             col_sql = " AND i.itemID IN (SELECT itemID FROM collectionItems WHERE collectionID = ?)"
             col_params = (col_row["collectionID"],)
-        try:
-            rows = conn.execute(
-                "SELECT i.key AS parent_key, ia.itemID AS att_id, fi.indexedChars AS chars "
-                "FROM fulltextItems fi "
-                "JOIN itemAttachments ia ON fi.itemID = ia.itemID "
-                "JOIN items i ON ia.parentItemID = i.itemID "
-                f"WHERE ia.parentItemID IS NOT NULL AND i.itemTypeID {self._get_excluded_sql()} "
-                f"AND i.libraryID = ?{col_sql}",
-                (self._library_id, *col_params),
-            ).fetchall()
-        except sqlite3.OperationalError:
-            return []  # no fulltext* tables in this database
-        return [(r["parent_key"], r["att_id"], r["chars"] or 0) for r in rows]
+        rows = conn.execute(
+            "SELECT i.key AS parent_key, ia.itemID AS att_id "
+            "FROM itemAttachments ia "
+            "JOIN items i ON ia.parentItemID = i.itemID "
+            f"WHERE ia.parentItemID IS NOT NULL AND i.itemTypeID {self._get_excluded_sql()} "
+            f"AND i.libraryID = ?{col_sql}",
+            (self._library_id, *col_params),
+        ).fetchall()
+        return [(r["parent_key"], r["att_id"]) for r in rows if r["att_id"] in indexed]
 
     def find_orphan_attachments(self) -> list[OrphanAttachment]:
         """Find storage-backed attachments whose file is missing from local storage.

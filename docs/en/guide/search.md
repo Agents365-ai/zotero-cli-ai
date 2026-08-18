@@ -25,7 +25,7 @@ zot search "tumour immunity" --ranked --collection "CR | HCC" --limit 10
 - `--collection` scopes the search to a collection (name or key; nested collections resolve by name). Omit it to search the whole library.
 - `--limit` sets the number of results. `--ranked` ignores `--sort`/`--type`/`--stream`.
 
-Retrieval is index-free: items are scored with idf-weighted term coverage from Zotero's own full-text index tables (the same index the Zotero app builds), fused with metadata matching (title/abstract/creators/tags/notes) via reciprocal rank fusion. A paper added a second ago is already searchable.
+Retrieval is index-free: items are scored with FTS5 bm25 against Zotero 10's own full-text index (`fulltext.sqlite`, the same index the Zotero app builds), fused with metadata matching (title/abstract/creators/tags/notes) via reciprocal rank fusion. A paper added a second ago is already searchable. On pre-Zotero 10 data directories (no `fulltext.sqlite`) full-text scoring degrades to metadata-only matching with a warning.
 
 JSON output:
 

@@ -20,7 +20,7 @@ from zotero_cli_cc.formatter import format_items, format_ranked_results, stream_
 @click.option(
     "--ranked",
     is_flag=True,
-    help="Relevance-ranked mode: idf-weighted full-text + metadata fusion with scores and "
+    help="Relevance-ranked mode: FTS5 bm25 full-text + metadata fusion with scores and "
     "snippets (ignores --sort/--type/--stream).",
 )
 @click.option(
