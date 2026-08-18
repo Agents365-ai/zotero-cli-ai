@@ -160,6 +160,72 @@ class TestContextManager:
         assert reader._conn is None
 
 
+class TestWalSnapshotFallback:
+    """Zotero 10 holds PRAGMA locking_mode=EXCLUSIVE with journal_mode=WAL on
+    zotero.sqlite for the app's whole lifetime, so no external process can open
+    it. The Reader must then fall back to a snapshot copy of zotero.sqlite plus
+    its WAL — and must see the WAL's latest committed writes, not a stale
+    checkpoint."""
+
+    @pytest.fixture
+    def locked_wal_db(self, tmp_path: Path, test_db_path: Path):
+        """WAL-mode copy of the fixture DB held under an exclusive lock by a
+        second connection, mimicking a running Zotero 10. A row written and
+        committed by the lock holder lives only in the WAL."""
+        import shutil
+        import sqlite3
+
+        db = tmp_path / "zotero.sqlite"
+        shutil.copy2(test_db_path, db)
+        setup = sqlite3.connect(str(db))
+        setup.execute("PRAGMA journal_mode=WAL")
+        setup.commit()
+        setup.close()  # the lock holder must be the only open connection
+
+        holder = sqlite3.connect(str(db), timeout=1.0)
+        holder.execute("PRAGMA locking_mode=EXCLUSIVE")
+        holder.execute("INSERT INTO items VALUES (900, 2, '2026-08-18', '2026-08-18', '2026-08-18', 1, 'WALFR900')")
+        holder.commit()  # committed to the WAL only; exclusive lock stays held
+        yield db
+        holder.close()
+
+    def test_locked_db_reads_see_latest_wal_writes(self, locked_wal_db: Path):
+        with ZoteroReader(locked_wal_db) as reader:
+            item = reader.get_item("WALFR900")
+            assert item is not None  # the snapshot replayed the WAL — no stale read
+            assert item.item_type == "journalArticle"
+            # base fixture data is visible too, via the snapshot path
+            assert reader.get_item("ATTN001") is not None
+            assert reader._tmp_dir is not None
+
+    def test_snapshot_temp_files_cleaned_up_on_close(self, locked_wal_db: Path):
+        with ZoteroReader(locked_wal_db) as reader:
+            assert reader.get_item("WALFR900") is not None
+            tmp_dir = reader._tmp_dir
+            assert tmp_dir is not None
+            assert (tmp_dir / "zotero.sqlite").exists()
+        assert reader._conn is None
+        assert reader._tmp_dir_obj is None
+        assert not tmp_dir.exists()
+
+    def test_unlocked_db_reads_are_live(self, tmp_path: Path, test_db_path: Path):
+        """With no lock holder (Zotero closed), an open Reader sees new writes
+        straight away — reads are live, not a snapshot."""
+        import shutil
+        import sqlite3
+
+        db = tmp_path / "zotero.sqlite"
+        shutil.copy2(test_db_path, db)
+        with ZoteroReader(db) as reader:
+            assert reader.get_item("ATTN001") is not None
+            assert reader._tmp_dir is None  # direct path, no snapshot taken
+            writer = sqlite3.connect(str(db))
+            writer.execute("INSERT INTO items VALUES (901, 2, '2026-08-18', '2026-08-18', '2026-08-18', 1, 'LIVEN901')")
+            writer.commit()
+            writer.close()
+            assert reader.get_item("LIVEN901") is not None
+
+
 class TestSchemaVersion:
     def test_check_schema_version(self, reader: ZoteroReader):
         version = reader.get_schema_version()

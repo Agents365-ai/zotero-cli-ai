@@ -30,9 +30,14 @@ _SYNC_STATE_FORCE_DOWNLOAD = 4
 # Excluded type names (looked up dynamically per database)
 _EXCLUDED_TYPE_NAMES = ("attachment", "note", "annotation")
 
-# Tested schema version range (Zotero 6–8)
+# Tested schema version range (Zotero 6–10; Zotero 10 is userdata schema 129)
 MIN_SCHEMA_VERSION = 100
 MAX_SCHEMA_VERSION = 200
+
+# Busy timeout for the direct read-only open. Zotero 10 holds
+# PRAGMA locking_mode=EXCLUSIVE on zotero.sqlite for the app's whole lifetime,
+# so a locked database never clears — fail fast and fall back to a snapshot.
+_CONNECT_BUSY_TIMEOUT_S = 1.5
 
 # SQLITE_MAX_VARIABLE_NUMBER can be as low as 999 on older SQLite builds, so
 # large IN (...) parameter lists are executed in batches. Sorted queries keep a
@@ -58,6 +63,20 @@ def _nocase_key(value: str) -> str:
 
 
 class ZoteroReader:
+    """Read-only access to the local Zotero SQLite database.
+
+    Connection semantics depend on whether the Zotero desktop app is running:
+
+    - Zotero closed: reads go straight to zotero.sqlite (read-only, WAL-aware)
+      and are always live.
+    - Zotero 10 running: the app holds PRAGMA locking_mode=EXCLUSIVE on
+      zotero.sqlite for its whole lifetime, so no external process can open it.
+      The Reader then works on a consistent snapshot — a copy of zotero.sqlite
+      plus its WAL taken when the Reader first connects — and reuses that
+      snapshot until close(). Writes Zotero makes afterwards are not visible;
+      close and reopen the Reader to refresh.
+    """
+
     def __init__(self, db_path: Path, library_id: int = 1, prefs_js_path: Path | None = None) -> None:
         self._db_path = db_path
         self._library_id = library_id
@@ -79,22 +98,27 @@ class ZoteroReader:
                 f"  Run 'zot config show' to check your configuration.\n"
                 f"  Run 'zot config init --data-dir <path>' to set the correct data directory."
             )
-        # immutable=1 skips WAL, avoids lock contention with running Zotero desktop
-        # Percent-encode so paths containing '?', '#' or '%' don't corrupt the URI
+        # Direct read-only open: live, WAL-aware data (a plain mode=ro open
+        # reads through the WAL). Percent-encode so paths containing '?', '#'
+        # or '%' don't corrupt the URI.
         uri_path = urllib.parse.quote(self._db_path.as_posix())
+        conn: sqlite3.Connection | None = None
         try:
             conn = sqlite3.connect(
-                f"file:{uri_path}?mode=ro&immutable=1",
+                f"file:{uri_path}?mode=ro",
                 uri=True,
-                timeout=5.0,
+                timeout=_CONNECT_BUSY_TIMEOUT_S,
             )
             conn.row_factory = sqlite3.Row
             conn.execute("SELECT 1 FROM items LIMIT 1")
             self._conn = conn
             return conn
         except sqlite3.OperationalError:
-            # Fallback: copy DB to temp file (e.g. if immutable read hits corruption)
-            return self._connect_from_copy()
+            if conn is not None:
+                conn.close()
+            # Locked (Zotero 10 holds an exclusive lock while running) or
+            # otherwise unreadable — fall back to a snapshot copy of DB + WAL.
+            return self._connect_from_snapshot()
 
     def _get_excluded_ids(self) -> tuple[int, ...]:
         """Look up excluded type IDs by name (cached after first call)."""
@@ -130,22 +154,59 @@ class ZoteroReader:
             return "", ()
         return "AND i.libraryID = ?", (self._library_id,)
 
-    def _connect_from_copy(self) -> sqlite3.Connection:
-        """Copy DB files to temp dir to avoid WAL locks."""
-        self._tmp_dir_obj = tempfile.TemporaryDirectory()
+    def _connect_from_snapshot(self) -> sqlite3.Connection:
+        """Open a throwaway snapshot copy of the database.
+
+        Used when the live database cannot be opened — typically because
+        Zotero 10 is running and holds PRAGMA locking_mode=EXCLUSIVE on
+        zotero.sqlite. The copy pairs zotero.sqlite with its WAL so SQLite
+        replays recent committed writes during recovery; the snapshot is taken
+        once per Reader instance and reused until close(). The copy is
+        validated with a trivial query and retried once from a fresh copy
+        (the live files can change while they are being copied) before giving
+        up with an explanatory error.
+        """
+        last_error: Exception | None = None
+        for _attempt in range(2):
+            conn: sqlite3.Connection | None = None
+            try:
+                tmp_db = self._make_snapshot()
+                # Read-write so SQLite can recover and replay the copied WAL;
+                # the writes recovery makes only touch the throwaway copy.
+                conn = sqlite3.connect(str(tmp_db), timeout=5.0)
+                conn.row_factory = sqlite3.Row
+                conn.execute("SELECT 1 FROM items LIMIT 1")
+            except (OSError, sqlite3.Error) as exc:
+                if conn is not None:
+                    conn.close()
+                last_error = exc
+                continue
+            self._conn = conn
+            return conn
+        raise sqlite3.OperationalError(
+            f"Cannot read the Zotero database: {self._db_path}\n"
+            "  Zotero 10 holds an exclusive lock on zotero.sqlite while it is running,\n"
+            f"  and reading a snapshot copy failed as well: {last_error}\n"
+            "  Close Zotero and try again; if the problem persists, the database may be corrupted."
+        ) from last_error
+
+    def _make_snapshot(self) -> Path:
+        """Copy zotero.sqlite (and its WAL, if present) into a fresh temp dir.
+
+        The -shm file is deliberately not copied — SQLite rebuilds it during
+        WAL recovery. Any previous snapshot for this Reader is discarded.
+        Returns the path of the snapshot database.
+        """
+        if self._tmp_dir_obj is not None:
+            self._tmp_dir_obj.cleanup()
+        self._tmp_dir_obj = tempfile.TemporaryDirectory(prefix="zot-reader-")
         self._tmp_dir = Path(self._tmp_dir_obj.name)
-        tmp = self._tmp_dir / "zotero.sqlite"
-        shutil.copy2(self._db_path, tmp)
+        tmp_db = self._tmp_dir / self._db_path.name
+        shutil.copy2(self._db_path, tmp_db)
         wal = self._db_path.with_suffix(".sqlite-wal")
-        shm = self._db_path.with_suffix(".sqlite-shm")
         if wal.exists():
-            shutil.copy2(wal, tmp.with_suffix(".sqlite-wal"))
-        if shm.exists():
-            shutil.copy2(shm, tmp.with_suffix(".sqlite-shm"))
-        conn = sqlite3.connect(str(tmp), timeout=5.0)
-        conn.row_factory = sqlite3.Row
-        self._conn = conn
-        return conn
+            shutil.copy2(wal, tmp_db.with_suffix(".sqlite-wal"))
+        return tmp_db
 
     def close(self) -> None:
         if self._conn:
