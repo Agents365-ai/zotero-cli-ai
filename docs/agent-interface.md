@@ -634,8 +634,8 @@ zot ask "what dataset was used?" --collection papers --evidence-k 8
 }
 ```
 
-Stage 1 scores items with idf-weighted term coverage from Zotero's full-text
-index tables, fused with metadata matching (title/abstract/creators/tags/notes)
+Stage 1 scores items with FTS5 bm25 against Zotero 10's full-text index
+(`fulltext.sqlite`), fused with metadata matching (title/abstract/creators/tags/notes)
 via reciprocal rank fusion. For `ask`, stage 2 additionally extracts PDF
 passages on the fly around the query terms (pdfium, cached). `--collection`
 takes a collection name or key; omitting it searches the whole library.

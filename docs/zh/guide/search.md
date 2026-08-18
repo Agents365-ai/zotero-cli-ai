@@ -25,7 +25,7 @@ zot search "tumour immunity" --ranked --collection "CR | HCC" --limit 10
 - `--collection` 将检索限定在某个集合（名称或键；嵌套集合按名称解析）内。省略则检索整个文献库。
 - `--limit` 设置返回结果数量。`--ranked` 会忽略 `--sort`/`--type`/`--stream`。
 
-检索是无索引的：条目评分来自 Zotero 自己的全文索引表（与 Zotero 应用构建的是同一个索引）中的 idf 加权词项覆盖度，并通过倒数排名融合（RRF）与元数据匹配（标题/摘要/作者/标签/笔记）合并。刚加入的论文立刻就能被搜到。
+检索是无索引的：条目评分基于 Zotero 10 自己的全文索引（`fulltext.sqlite`，与 Zotero 应用构建的是同一个索引）以 FTS5 bm25 计算，并通过倒数排名融合（RRF）与元数据匹配（标题/摘要/作者/标签/笔记）合并。刚加入的论文立刻就能被搜到。在 Zotero 10 之前的数据目录（没有 `fulltext.sqlite`）中，全文评分会降级为仅元数据匹配并发出警告。
 
 JSON 输出：
 

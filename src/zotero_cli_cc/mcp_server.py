@@ -912,7 +912,7 @@ def search(
         direction: Sort direction — 'asc' or 'desc' (default 'desc').
         limit: Maximum number of results (default 50).
         library: Library — 'user' (default) or 'group:<id>'.
-        ranked: If True, use relevance-ranked retrieval (idf-weighted full-text
+        ranked: If True, use relevance-ranked retrieval (FTS5 bm25 full-text
             + metadata fusion, scores and snippets) instead of filter search.
     """
     return _handle_search(
