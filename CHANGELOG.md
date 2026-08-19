@@ -7,6 +7,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-08-19
+
 ### Changed
 
 - **Ranked retrieval now uses Zotero 10's FTS5 full-text index** — Zotero 10
@@ -23,6 +25,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **Bridge plugin supports Zotero 10** — the bundled `zot-cli-bridge`
+  extension's manifest pinned `strict_max_version: 9.*`, so Zotero 10 (which
+  enforces it on stable builds) disabled the plugin and the `/zot-cli/*`
+  endpoints went dead. Bumped to `10.0.*` (bridge v0.4.1); the plugin uses
+  none of the APIs removed in Zotero 10. Reinstall the XPI (`zot bridge
+  install`) after upgrading Zotero.
 - **Local reads against a running Zotero 10** — Zotero 10 holds
   `PRAGMA locking_mode=EXCLUSIVE` with `journal_mode=WAL` on zotero.sqlite for
   the app's whole lifetime, so no external process can open the database even
