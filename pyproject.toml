@@ -1,6 +1,6 @@
 [project]
 name = "zotero-cli-ai"
-version = "0.13.0"
+version = "0.14.0"
 description = "Zotero CLI for any AI agent — SQLite reads + Web API writes"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE", "LICENSE-COMMERCIAL"]
