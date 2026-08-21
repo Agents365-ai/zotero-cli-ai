@@ -87,6 +87,19 @@ class ZoteroWriter:
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
 
+    def add_standalone_note(self, content: str) -> str:
+        """Create a top-level (standalone) note with no parent item."""
+        try:
+            template = self._zot.item_template("note")
+            template.pop("parentItem", None)
+            template["note"] = content
+            resp = self._zot.create_items([template])
+            return self._check_response(resp)
+        except (HttpxConnectError, HttpxTimeoutException) as e:
+            raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
+        except PyZoteroError as e:
+            raise _friendly_api_error(e) from e
+
     def update_note(self, note_key: str, content: str) -> None:
         try:
             item = self._zot.item(note_key)

@@ -34,6 +34,18 @@ zot note ABC123 --add "<p>Already <strong>HTML</strong>.</p>" --raw
 !!! warning "Do not POST raw `**` Markdown"
     The Zotero API escapes Markdown emphasis it does not interpret: posting `**bold**` stores `\*\*bold\*\*`, which Zotero renders as literal text. Always let `--add` convert, or pass `--raw` with HTML.
 
+### Standalone (top-level) notes
+
+Standalone notes have no parent item and appear at the top level of the library. Create and list them with `--standalone` (no `KEY`):
+
+```bash
+zot note --standalone --add "Key finding: ..."   # create a standalone note
+zot note --standalone                            # list all standalone notes
+zot note STANKEY                                 # read a standalone note by its key
+```
+
+The same Markdown handling (conversion, `--raw`, `--dry-run`) applies to standalone notes.
+
 ## Update a Note
 
 Notes can be updated via the MCP tools (`note_update`). See [MCP Tools Reference](../mcp/tools.md).

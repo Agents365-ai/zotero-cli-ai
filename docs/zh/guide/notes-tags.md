@@ -34,6 +34,18 @@ zot note ABC123 --add "<p>Already <strong>HTML</strong>.</p>" --raw
 !!! warning "不要直接提交 `**` Markdown"
     Zotero API 会把它无法解释的 Markdown 强调字符转义：提交 `**bold**` 会存储为 `\*\*bold\*\*`，在 Zotero 中渲染为字面文本。请始终让 `--add` 完成转换，或配合 `--raw` 传入 HTML。
 
+### 独立笔记（standalone / 顶层笔记）
+
+独立笔记没有父条目，显示在库的顶层。用 `--standalone`（不带 `KEY`）创建和列出：
+
+```bash
+zot note --standalone --add "关键发现: ..."   # 创建独立笔记
+zot note --standalone                        # 列出所有独立笔记
+zot note STANKEY                             # 按 key 读取独立笔记
+```
+
+独立笔记同样适用上面的 Markdown 处理（转换、`--raw`、`--dry-run`）。
+
 ## 更新笔记
 
 可以通过 MCP 工具（`note_update`）更新笔记。参见 [MCP 工具参考](../mcp/tools.md)。

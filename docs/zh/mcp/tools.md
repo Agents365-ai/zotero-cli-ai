@@ -19,7 +19,7 @@
 | `cite` | 格式化引用 (apa/nature/vancouver) | `key`, `style?` |
 | `relate` | 查找相关条目 | `key`, `limit?` |
 | `recent` | 最近添加/修改的条目 | `days?`, `modified?`, `limit?` |
-| `note_view` | 查看条目笔记 | `key` |
+| `note_view` | 查看条目笔记（`standalone=True` 列出所有独立笔记） | `key`, `standalone?` |
 | `tag_view` | 查看条目标签 | `key` |
 | `find_orphans` | 查找本地缺失文件的附件 | `dead_only?` |
 | `collection_list` | 列出所有集合 | — |
@@ -37,7 +37,7 @@
 | `delete` | 删除条目（移入回收站） | `keys` |
 | `update` | 更新元数据 | `key`, `title?`, `date?`, `fields?` |
 | `attach` | 上传附件 | `parent_key`, `file_path`, `via_bridge?` |
-| `note_add` | 添加笔记（Markdown 自动转 HTML；传 `raw=True` 原样存储） | `key`, `content`, `raw?` |
+| `note_add` | 添加笔记（Markdown 自动转 HTML；传 `raw=True` 原样存储；`standalone=True` 创建独立笔记） | `key`, `content`, `raw?`, `standalone?` |
 | `note_update` | 更新笔记（Markdown 自动转 HTML；传 `raw=True` 原样存储） | `note_key`, `content`, `raw?` |
 | `tag_add` | 添加标签 | `keys`, `tags` |
 | `tag_remove` | 删除标签 | `keys`, `tags` |
