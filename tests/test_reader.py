@@ -100,6 +100,44 @@ class TestNotes:
         assert len(notes) == 0
 
 
+class TestStandaloneNotes:
+    @staticmethod
+    def _db_with_standalone(tmp_path: Path, test_db_path: Path) -> Path:
+        import shutil
+        import sqlite3
+
+        db = tmp_path / "zotero.sqlite"
+        shutil.copy2(test_db_path, db)
+        conn = sqlite3.connect(db)
+        conn.execute("INSERT INTO items (itemID, itemTypeID, libraryID, key) VALUES (100, 26, 1, 'STAN001')")
+        conn.execute("INSERT INTO itemNotes (itemID, parentItemID, note) VALUES (100, NULL, '<p>Standalone note</p>')")
+        conn.commit()
+        conn.close()
+        return db
+
+    def test_get_standalone_notes(self, tmp_path: Path, test_db_path: Path):
+        reader = ZoteroReader(self._db_with_standalone(tmp_path, test_db_path))
+        notes = reader.get_standalone_notes()
+        assert len(notes) == 1
+        assert notes[0].key == "STAN001"
+        assert notes[0].parent_key == ""
+        assert notes[0].content == "Standalone note"
+
+    def test_read_note_by_own_key(self, tmp_path: Path, test_db_path: Path):
+        reader = ZoteroReader(self._db_with_standalone(tmp_path, test_db_path))
+        notes = reader.get_notes("STAN001")
+        assert len(notes) == 1
+        assert notes[0].key == "STAN001"
+        assert notes[0].content == "Standalone note"
+
+    def test_child_note_still_requires_item_key(self, reader: ZoteroReader):
+        # A child note's parent_key is resolved when the note is read by its own key.
+        notes = reader.get_notes("NOTE004")
+        assert len(notes) == 1
+        assert notes[0].key == "NOTE004"
+        assert notes[0].parent_key == "ATTN001"
+
+
 class TestCollections:
     def test_get_collections(self, reader: ZoteroReader):
         collections = reader.get_collections()

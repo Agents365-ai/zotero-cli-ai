@@ -710,10 +710,31 @@ class ZoteroReader:
         parent = conn.execute("SELECT itemID FROM items WHERE key = ?", (key,)).fetchone()
         if parent is None:
             return []
+        # A note key reads the note itself; an item key reads its child notes.
+        note_row = conn.execute(
+            "SELECT i.itemID, i.key, n.note, p.key AS parent_key FROM itemNotes n "
+            "JOIN items i ON n.itemID = i.itemID LEFT JOIN items p ON n.parentItemID = p.itemID "
+            "WHERE i.key = ?",
+            (key,),
+        ).fetchone()
+        if note_row is not None:
+            return self._notes_from_rows(conn, [note_row], parent_key=note_row["parent_key"] or "")
         rows = conn.execute(
             "SELECT i.itemID, i.key, n.note FROM itemNotes n JOIN items i ON n.itemID = i.itemID WHERE n.parentItemID = ?",
             (parent["itemID"],),
         ).fetchall()
+        return self._notes_from_rows(conn, rows, parent_key=key)
+
+    def get_standalone_notes(self) -> list[Note]:
+        """List all top-level (standalone) notes — note items with no parent."""
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT i.itemID, i.key, n.note FROM itemNotes n JOIN items i ON n.itemID = i.itemID "
+            "WHERE n.parentItemID IS NULL",
+        ).fetchall()
+        return self._notes_from_rows(conn, rows, parent_key="")
+
+    def _notes_from_rows(self, conn: sqlite3.Connection, rows: list[sqlite3.Row], parent_key: str) -> list[Note]:
         if not rows:
             return []
         # Batch-fetch tags for all note items
@@ -730,7 +751,7 @@ class ZoteroReader:
         for r in rows:
             content = self._html_to_markdown(r["note"] or "")
             tags = tags_by_id.get(r["itemID"], [])
-            notes.append(Note(key=r["key"], parent_key=key, content=content, tags=tags))
+            notes.append(Note(key=r["key"], parent_key=parent_key, content=content, tags=tags))
         return notes
 
     def get_collections(self) -> list[Collection]:

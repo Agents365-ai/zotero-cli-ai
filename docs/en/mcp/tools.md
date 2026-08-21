@@ -19,7 +19,7 @@
 | `cite` | Format citation (apa/nature/vancouver) | `key`, `style?` |
 | `relate` | Find related items | `key`, `limit?` |
 | `recent` | Recently added/modified | `days?`, `modified?`, `limit?` |
-| `note_view` | View item notes | `key` |
+| `note_view` | View item notes (or all standalone notes with `standalone=True`) | `key`, `standalone?` |
 | `tag_view` | View item tags | `key` |
 | `find_orphans` | Find attachments whose file is missing locally | `dead_only?` |
 | `collection_list` | List all collections | — |
@@ -37,7 +37,7 @@
 | `delete` | Delete items (trash) | `keys` |
 | `update` | Update metadata | `key`, `title?`, `date?`, `fields?` |
 | `attach` | Upload file attachment | `parent_key`, `file_path`, `via_bridge?` |
-| `note_add` | Add note to item (Markdown auto-converted to HTML; pass `raw=True` for verbatim) | `key`, `content`, `raw?` |
+| `note_add` | Add note to item (Markdown auto-converted to HTML; pass `raw=True` for verbatim; `standalone=True` creates a top-level note) | `key`, `content`, `raw?`, `standalone?` |
 | `note_update` | Update existing note (Markdown auto-converted to HTML; pass `raw=True` for verbatim) | `note_key`, `content`, `raw?` |
 | `tag_add` | Add tags to items | `keys`, `tags` |
 | `tag_remove` | Remove tags from items | `keys`, `tags` |

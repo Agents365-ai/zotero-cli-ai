@@ -493,6 +493,20 @@ class TestHandleNoteView:
         result = _handle_note_view("ABC123")
         assert result["notes"] == []
 
+    @patch("zotero_cli_cc.mcp_server._get_reader")
+    def test_returns_standalone_notes(self, mock_get_reader):
+        from zotero_cli_cc.mcp_server import _handle_note_view
+
+        reader = MagicMock()
+        reader.get_standalone_notes.return_value = [_make_note(key="STAN1", parent_key="")]
+        mock_get_reader.return_value = reader
+
+        result = _handle_note_view("", standalone=True)
+        assert len(result["notes"]) == 1
+        assert result["notes"][0]["key"] == "STAN1"
+        assert result["parent_key"] is None
+        reader.get_notes.assert_not_called()
+
 
 class TestHandleTagView:
     @patch("zotero_cli_cc.mcp_server._get_reader")
@@ -649,6 +663,19 @@ class TestHandleNoteAdd:
         result = _handle_note_add("ABC123", "<p>Already HTML</p>", raw=True)
         assert result["note_key"] == "NOTE2"
         writer.add_note.assert_called_once_with("ABC123", "<p>Already HTML</p>")
+
+    @patch("zotero_cli_cc.mcp_server._get_writer")
+    def test_adds_standalone_note(self, mock_get_writer):
+        from zotero_cli_cc.mcp_server import _handle_note_add
+
+        writer = MagicMock()
+        writer.add_standalone_note.return_value = "STAN2"
+        mock_get_writer.return_value = writer
+
+        result = _handle_note_add("", "**b**", standalone=True)
+        assert result["note_key"] == "STAN2"
+        writer.add_standalone_note.assert_called_once_with("<p><strong>b</strong></p>")
+        writer.add_note.assert_not_called()
 
 
 class TestHandleNoteUpdate:

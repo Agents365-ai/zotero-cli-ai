@@ -391,8 +391,14 @@ def _handle_find_orphans(dead_only: bool = False, library: str = "user") -> dict
     return {"orphans": [dataclasses.asdict(o) for o in orphans], "total": len(orphans), "counts": counts}
 
 
-def _handle_note_view(key: str, library: str = "user") -> dict:
+def _handle_note_view(key: str, library: str = "user", standalone: bool = False) -> dict:
     reader = _get_reader(library)
+    if standalone:
+        notes = reader.get_standalone_notes()
+        return {
+            "notes": [_note_to_dict(n) for n in notes],
+            "parent_key": None,
+        }
     notes = reader.get_notes(key)
     return {
         "notes": [_note_to_dict(n) for n in notes],
@@ -449,10 +455,13 @@ def _handle_duplicates(strategy: str = "both", threshold: float = 0.85, limit: i
 # ---------------------------------------------------------------------------
 
 
-def _handle_note_add(key: str, content: str, library: str = "user", raw: bool = False) -> dict:
+def _handle_note_add(
+    key: str, content: str, library: str = "user", raw: bool = False, standalone: bool = False
+) -> dict:
     try:
         writer = _get_writer(library)
-        note_key = writer.add_note(key, content if raw else md_to_zotero_html(content))
+        payload = content if raw else md_to_zotero_html(content)
+        note_key = writer.add_standalone_note(payload) if standalone else writer.add_note(key, payload)
         return {"note_key": note_key}
     except ZoteroWriteError as e:
         return {"error": str(e), "context": "note_add"}
@@ -1067,14 +1076,15 @@ def recent(days: int = 7, modified: bool = False, limit: int = 50, library: str 
 
 
 @mcp.tool()
-def note_view(key: str, library: str = "user") -> dict:
-    """View all notes attached to a Zotero item.
+def note_view(key: str, library: str = "user", standalone: bool = False) -> dict:
+    """View notes attached to a Zotero item, or all standalone (top-level) notes.
 
     Args:
-        key: The Zotero item key.
+        key: The Zotero item key (ignored when standalone=True).
         library: Library — 'user' (default) or 'group:<id>'.
+        standalone: When True, list all top-level notes (no parent item).
     """
-    return _handle_note_view(key, library=library)
+    return _handle_note_view(key, library=library, standalone=standalone)
 
 
 @mcp.tool()
@@ -1128,20 +1138,21 @@ def duplicates(strategy: str = "both", threshold: float = 0.85, limit: int = 50,
 
 
 @mcp.tool()
-def note_add(key: str, content: str, library: str = "user", raw: bool = False) -> dict:
-    """Add a note to a Zotero item.
+def note_add(key: str, content: str, library: str = "user", raw: bool = False, standalone: bool = False) -> dict:
+    """Add a note to a Zotero item, or a standalone (top-level) note.
 
     Zotero stores notes as HTML, so Markdown content is converted to HTML
     before submitting (YAML frontmatter is stripped, Obsidian callouts become
     bold blockquotes). Pass ``raw=True`` to store the content verbatim.
 
     Args:
-        key: The Zotero item key to attach the note to.
+        key: The Zotero item key to attach the note to (ignored when standalone=True).
         content: The note content (Markdown, or HTML if raw=True).
         library: Library — 'user' (default) or 'group:<id>'.
         raw: Store content verbatim without Markdown-to-HTML conversion.
+        standalone: When True, create a top-level note with no parent item.
     """
-    return _handle_note_add(key, content, library=library, raw=raw)
+    return _handle_note_add(key, content, library=library, raw=raw, standalone=standalone)
 
 
 @mcp.tool()

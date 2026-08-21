@@ -25,6 +25,35 @@ def test_add_note(mock_zotero_cls):
 
 
 @patch("zotero_cli_cc.core.writer.zotero.Zotero")
+def test_add_standalone_note(mock_zotero_cls):
+    mock_zot = MagicMock()
+    mock_zotero_cls.return_value = mock_zot
+    mock_zot.item_template.return_value = {"itemType": "note", "note": "", "parentItem": ""}
+    mock_zot.create_items.return_value = {"successful": {"0": {"key": "N2"}}}
+
+    writer = ZoteroWriter(library_id="123", api_key="abc")
+    result = writer.add_standalone_note("My note content")
+    assert result == "N2"
+    template = mock_zot.create_items.call_args[0][0][0]
+    # A top-level note must not carry a parentItem key
+    assert "parentItem" not in template
+
+
+@patch("zotero_cli_cc.core.writer.zotero.Zotero")
+def test_add_standalone_note_network_error(mock_zotero_cls):
+    mock_zot = MagicMock()
+    mock_zotero_cls.return_value = mock_zot
+    mock_zot.item_template.return_value = {"itemType": "note", "note": "", "parentItem": ""}
+    from httpx import ConnectError
+
+    mock_zot.create_items.side_effect = ConnectError("Network unreachable")
+
+    writer = ZoteroWriter(library_id="123", api_key="abc")
+    with pytest.raises(ZoteroWriteError, match="Network"):
+        writer.add_standalone_note("content")
+
+
+@patch("zotero_cli_cc.core.writer.zotero.Zotero")
 def test_add_tags(mock_zotero_cls):
     mock_zot = MagicMock()
     mock_zotero_cls.return_value = mock_zot
