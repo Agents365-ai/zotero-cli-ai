@@ -18,6 +18,7 @@ dependencies = [
     "pyzotero>=1.5",
     "pypdfium2>=4.30",
     "rich>=13.0",
+    "markdown-it-py>=2.2.0",
     "tomli>=2.0; python_version < '3.11'",
     "markdownify>=1.2.2",
     "requests>=2.31",

@@ -6,6 +6,7 @@ import click
 
 from zotero_cli_cc.commands._helpers import build_writer, open_reader
 from zotero_cli_cc.config import load_config
+from zotero_cli_cc.core.markdown import md_to_zotero_html
 from zotero_cli_cc.core.writer import SYNC_REMINDER, ZoteroWriteError
 from zotero_cli_cc.exit_codes import emit_error
 from zotero_cli_cc.formatter import envelope_ok, format_notes
@@ -13,7 +14,8 @@ from zotero_cli_cc.formatter import envelope_ok, format_notes
 
 @click.command("note")
 @click.argument("key")
-@click.option("--add", "content", default=None, help="Add a new note")
+@click.option("--add", "content", default=None, help="Add a new note (Markdown, converted to HTML)")
+@click.option("--raw", is_flag=True, help="Store note content verbatim, skipping Markdown-to-HTML conversion")
 @click.option("--dry-run", is_flag=True, help="Preview the note addition without executing (only with --add)")
 @click.option("--idempotency-key", default=None, help="Key so retries are safe; same key returns the original result")
 @click.pass_context
@@ -21,15 +23,23 @@ def note_cmd(
     ctx: click.Context,
     key: str,
     content: str | None,
+    raw: bool,
     dry_run: bool,
     idempotency_key: str | None,
 ) -> None:
-    """View or add notes for an item. `--add` MUTATES LIBRARY.
+    """View a note or add one to an item. `--add` MUTATES LIBRARY.
+
+    \b
+    Zotero stores notes as HTML, so `--add` converts Markdown to HTML before
+    submitting: YAML frontmatter is stripped and Obsidian callouts
+    (> [!type] ...) become bold blockquotes. Use `--raw` to store the content
+    verbatim instead.
 
     \b
     Examples:
       zot note ABC123                            View notes
-      zot note ABC123 --add "Key finding: ..."   Add a note
+      zot note ABC123 --add "Key finding: ..."   Add a note (Markdown -> HTML)
+      zot note ABC123 --add "<p>...</p>" --raw   Add verbatim HTML
       zot note ABC123 --add "..." --dry-run      Preview addition
       zot --json note ABC123                     JSON output
     """
@@ -37,12 +47,13 @@ def note_cmd(
     json_out = ctx.obj.get("json", False)
 
     if content:
+        payload = content if raw else md_to_zotero_html(content)
         if dry_run:
-            data = {"would": {"parent": key, "content_preview": content[:200]}}
+            data = {"would": {"parent": key, "content_preview": payload[:200]}}
             if json_out:
                 click.echo(json.dumps(envelope_ok(data, extra={"dry_run": True}), indent=2, ensure_ascii=False))
             else:
-                click.echo(f"[dry-run] Would add note to '{key}': {content[:80]}...")
+                click.echo(f"[dry-run] Would add note to '{key}': {payload[:80]}...")
             return
 
         from zotero_cli_cc.core.idempotency import get_cached, store_cached
@@ -59,7 +70,7 @@ def note_cmd(
 
         writer = build_writer(ctx, cfg, json_out, context="note")
         try:
-            note_key = writer.add_note(key, content)
+            note_key = writer.add_note(key, payload)
         except ZoteroWriteError as e:
             emit_error(
                 e.code,

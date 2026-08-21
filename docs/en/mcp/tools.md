@@ -37,8 +37,8 @@
 | `delete` | Delete items (trash) | `keys` |
 | `update` | Update metadata | `key`, `title?`, `date?`, `fields?` |
 | `attach` | Upload file attachment | `parent_key`, `file_path`, `via_bridge?` |
-| `note_add` | Add note to item | `key`, `content` |
-| `note_update` | Update existing note | `note_key`, `content` |
+| `note_add` | Add note to item (Markdown auto-converted to HTML; pass `raw=True` for verbatim) | `key`, `content`, `raw?` |
+| `note_update` | Update existing note (Markdown auto-converted to HTML; pass `raw=True` for verbatim) | `note_key`, `content`, `raw?` |
 | `tag_add` | Add tags to items | `keys`, `tags` |
 | `tag_remove` | Remove tags from items | `keys`, `tags` |
 | `collection_create` | Create collection | `name`, `parent_key?` |

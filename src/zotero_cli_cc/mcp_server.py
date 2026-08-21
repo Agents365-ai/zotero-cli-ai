@@ -15,6 +15,7 @@ from zotero_cli_cc.config import (
     load_config,
     load_pdf_config,
 )
+from zotero_cli_cc.core.markdown import md_to_zotero_html
 from zotero_cli_cc.core.pdf_cache import PdfCache
 from zotero_cli_cc.core.pdf_extractor import PdfExtractionError, get_extractor
 from zotero_cli_cc.core.rank import build_ask_evidence, make_snippet, rank, resolve_collection_key
@@ -448,19 +449,19 @@ def _handle_duplicates(strategy: str = "both", threshold: float = 0.85, limit: i
 # ---------------------------------------------------------------------------
 
 
-def _handle_note_add(key: str, content: str, library: str = "user") -> dict:
+def _handle_note_add(key: str, content: str, library: str = "user", raw: bool = False) -> dict:
     try:
         writer = _get_writer(library)
-        note_key = writer.add_note(key, content)
+        note_key = writer.add_note(key, content if raw else md_to_zotero_html(content))
         return {"note_key": note_key}
     except ZoteroWriteError as e:
         return {"error": str(e), "context": "note_add"}
 
 
-def _handle_note_update(note_key: str, content: str, library: str = "user") -> dict:
+def _handle_note_update(note_key: str, content: str, library: str = "user", raw: bool = False) -> dict:
     try:
         writer = _get_writer(library)
-        writer.update_note(note_key, content)
+        writer.update_note(note_key, content if raw else md_to_zotero_html(content))
         return {"note_key": note_key, "updated": True}
     except ZoteroWriteError as e:
         return {"error": str(e), "context": "note_update"}
@@ -1127,27 +1128,37 @@ def duplicates(strategy: str = "both", threshold: float = 0.85, limit: int = 50,
 
 
 @mcp.tool()
-def note_add(key: str, content: str, library: str = "user") -> dict:
+def note_add(key: str, content: str, library: str = "user", raw: bool = False) -> dict:
     """Add a note to a Zotero item.
+
+    Zotero stores notes as HTML, so Markdown content is converted to HTML
+    before submitting (YAML frontmatter is stripped, Obsidian callouts become
+    bold blockquotes). Pass ``raw=True`` to store the content verbatim.
 
     Args:
         key: The Zotero item key to attach the note to.
-        content: The note content (HTML or plain text).
+        content: The note content (Markdown, or HTML if raw=True).
         library: Library — 'user' (default) or 'group:<id>'.
+        raw: Store content verbatim without Markdown-to-HTML conversion.
     """
-    return _handle_note_add(key, content, library=library)
+    return _handle_note_add(key, content, library=library, raw=raw)
 
 
 @mcp.tool()
-def note_update(note_key: str, content: str, library: str = "user") -> dict:
+def note_update(note_key: str, content: str, library: str = "user", raw: bool = False) -> dict:
     """Update an existing note in the Zotero library.
+
+    Zotero stores notes as HTML, so Markdown content is converted to HTML
+    before submitting (YAML frontmatter is stripped, Obsidian callouts become
+    bold blockquotes). Pass ``raw=True`` to pass the content verbatim.
 
     Args:
         note_key: The Zotero note key to update.
-        content: The new note content (HTML or plain text).
+        content: The new note content (Markdown, or HTML if raw=True).
         library: Library — 'user' (default) or 'group:<id>'.
+        raw: Store content verbatim without Markdown-to-HTML conversion.
     """
-    return _handle_note_update(note_key, content, library=library)
+    return _handle_note_update(note_key, content, library=library, raw=raw)
 
 
 @mcp.tool()
