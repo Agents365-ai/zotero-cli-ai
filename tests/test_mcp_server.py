@@ -627,7 +627,7 @@ class TestGetWriter:
 
 class TestHandleNoteAdd:
     @patch("zotero_cli_cc.mcp_server._get_writer")
-    def test_adds_note(self, mock_get_writer):
+    def test_adds_note_converts_markdown(self, mock_get_writer):
         from zotero_cli_cc.mcp_server import _handle_note_add
 
         writer = MagicMock()
@@ -636,12 +636,24 @@ class TestHandleNoteAdd:
 
         result = _handle_note_add("ABC123", "Some note content")
         assert result["note_key"] == "NOTE2"
-        writer.add_note.assert_called_once_with("ABC123", "Some note content")
+        writer.add_note.assert_called_once_with("ABC123", "<p>Some note content</p>")
+
+    @patch("zotero_cli_cc.mcp_server._get_writer")
+    def test_adds_note_raw_skips_conversion(self, mock_get_writer):
+        from zotero_cli_cc.mcp_server import _handle_note_add
+
+        writer = MagicMock()
+        writer.add_note.return_value = "NOTE2"
+        mock_get_writer.return_value = writer
+
+        result = _handle_note_add("ABC123", "<p>Already HTML</p>", raw=True)
+        assert result["note_key"] == "NOTE2"
+        writer.add_note.assert_called_once_with("ABC123", "<p>Already HTML</p>")
 
 
 class TestHandleNoteUpdate:
     @patch("zotero_cli_cc.mcp_server._get_writer")
-    def test_updates_note(self, mock_get_writer):
+    def test_updates_note_converts_markdown(self, mock_get_writer):
         from zotero_cli_cc.mcp_server import _handle_note_update
 
         writer = MagicMock()
@@ -650,7 +662,19 @@ class TestHandleNoteUpdate:
         result = _handle_note_update("NOTE1", "Updated content")
         assert result["note_key"] == "NOTE1"
         assert result["updated"] is True
-        writer.update_note.assert_called_once_with("NOTE1", "Updated content")
+        writer.update_note.assert_called_once_with("NOTE1", "<p>Updated content</p>")
+
+    @patch("zotero_cli_cc.mcp_server._get_writer")
+    def test_updates_note_raw_skips_conversion(self, mock_get_writer):
+        from zotero_cli_cc.mcp_server import _handle_note_update
+
+        writer = MagicMock()
+        mock_get_writer.return_value = writer
+
+        result = _handle_note_update("NOTE1", "<p>Updated content</p>", raw=True)
+        assert result["note_key"] == "NOTE1"
+        assert result["updated"] is True
+        writer.update_note.assert_called_once_with("NOTE1", "<p>Updated content</p>")
 
 
 class TestHandleTagAdd:

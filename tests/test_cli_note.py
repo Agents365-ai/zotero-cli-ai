@@ -30,7 +30,7 @@ def test_note_read_json(test_db_path):
 
 
 @patch("zotero_cli_cc.commands._helpers.ZoteroWriter")
-def test_note_add(mock_writer_cls, test_db_path):
+def test_note_add_converts_markdown_to_html(mock_writer_cls, test_db_path):
     mock_writer = MagicMock()
     mock_writer_cls.return_value = mock_writer
     mock_writer.add_note.return_value = "NEWNOTE"
@@ -38,7 +38,7 @@ def test_note_add(mock_writer_cls, test_db_path):
     runner = CliRunner()
     result = runner.invoke(
         main,
-        ["note", "ATTN001", "--add", "New note"],
+        ["note", "ATTN001", "--add", "**New note**"],
         env={
             "ZOT_DATA_DIR": str(test_db_path.parent),
             "ZOT_LIBRARY_ID": "123",
@@ -47,14 +47,35 @@ def test_note_add(mock_writer_cls, test_db_path):
         },
     )
     assert result.exit_code == 0
-    mock_writer.add_note.assert_called_once()
+    mock_writer.add_note.assert_called_once_with("ATTN001", "<p><strong>New note</strong></p>")
 
 
-def test_note_add_dry_run(test_db_path):
+@patch("zotero_cli_cc.commands._helpers.ZoteroWriter")
+def test_note_add_raw_stores_verbatim(mock_writer_cls, test_db_path):
+    mock_writer = MagicMock()
+    mock_writer_cls.return_value = mock_writer
+    mock_writer.add_note.return_value = "NEWNOTE"
+
     runner = CliRunner()
     result = runner.invoke(
         main,
-        ["note", "ATTN001", "--add", "New note", "--dry-run"],
+        ["note", "ATTN001", "--add", "<p>New note</p>", "--raw"],
+        env={
+            "ZOT_DATA_DIR": str(test_db_path.parent),
+            "ZOT_LIBRARY_ID": "123",
+            "ZOT_API_KEY": "abc",
+            "ZOT_FORMAT": "table",
+        },
+    )
+    assert result.exit_code == 0
+    mock_writer.add_note.assert_called_once_with("ATTN001", "<p>New note</p>")
+
+
+def test_note_add_dry_run_previews_converted_html(test_db_path):
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["note", "ATTN001", "--add", "# Heading\n**bold**", "--dry-run"],
         env={
             "ZOT_DATA_DIR": str(test_db_path.parent),
             "ZOT_LIBRARY_ID": "123",
@@ -64,3 +85,5 @@ def test_note_add_dry_run(test_db_path):
     )
     assert result.exit_code == 0
     assert "Would add note" in result.output
+    assert "<h1>Heading</h1>" in result.output
+    assert "<strong>bold</strong>" in result.output

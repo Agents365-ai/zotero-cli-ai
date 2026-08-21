@@ -40,7 +40,7 @@ In JSON mode, commands use the standard shapes below.
   "ok": true,
   "data": { "key": "ABC123", "title": "..." },
   "meta": {
-    "schema_version": "1.9.0",
+    "schema_version": "1.10.0",
     "cli_version": "0.3.0",
     "request_id": "a1b2c3d4e5f6",
     "latency_ms": 412
@@ -70,7 +70,7 @@ Mutating command envelopes may include `data.sync_required`; when present, it is
     "retryable": false,
     "hint": "Run 'zot search' to find valid item keys"
   },
-  "meta": { "request_id": "...", "schema_version": "1.9.0" }
+  "meta": { "request_id": "...", "schema_version": "1.10.0" }
 }
 ```
 
@@ -493,7 +493,7 @@ JSON output envelopes the extracted content:
     "text": "...",
     "meta": { "extractor": "pymupdf", "cached": true }
   },
-  "meta": { "schema_version": "1.9.0", ... }
+  "meta": { "schema_version": "1.10.0", ... }
 }
 ```
 
@@ -604,7 +604,7 @@ Ranked JSON output:
       }
     ]
   },
-  "meta": { "schema_version": "1.9.0", ... }
+  "meta": { "schema_version": "1.10.0", ... }
 }
 ```
 
@@ -630,7 +630,7 @@ zot ask "what dataset was used?" --collection papers --evidence-k 8
     ],
     "answer_instructions": "Answer the question using ONLY the evidence below. Cite each claim with its cite_key in parentheses, e.g. (ABCD1234). ..."
   },
-  "meta": { "schema_version": "1.9.0", ... }
+  "meta": { "schema_version": "1.10.0", ... }
 }
 ```
 

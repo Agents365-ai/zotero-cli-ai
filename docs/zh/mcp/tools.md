@@ -37,8 +37,8 @@
 | `delete` | 删除条目（移入回收站） | `keys` |
 | `update` | 更新元数据 | `key`, `title?`, `date?`, `fields?` |
 | `attach` | 上传附件 | `parent_key`, `file_path`, `via_bridge?` |
-| `note_add` | 添加笔记 | `key`, `content` |
-| `note_update` | 更新笔记 | `note_key`, `content` |
+| `note_add` | 添加笔记（Markdown 自动转 HTML；传 `raw=True` 原样存储） | `key`, `content`, `raw?` |
+| `note_update` | 更新笔记（Markdown 自动转 HTML；传 `raw=True` 原样存储） | `note_key`, `content`, `raw?` |
 | `tag_add` | 添加标签 | `keys`, `tags` |
 | `tag_remove` | 删除标签 | `keys`, `tags` |
 | `collection_create` | 创建集合 | `name`, `parent_key?` |
