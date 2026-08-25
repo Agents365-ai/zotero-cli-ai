@@ -18,7 +18,7 @@
 
 - **Reads** — direct local SQLite, zero-config, offline, millisecond response
 - **Writes** — safe via Zotero Web API, Zotero stays in sync
-- **PDF + ranked search** — extract full text with caching; index-free ranked retrieval over the whole library or scoped to a collection
+- **PDF + ranked search** — extract full text with caching; index-free ranked retrieval scored with FTS5 bm25 against Zotero 10's own full-text index (`fulltext.sqlite`), library-wide or scoped to a collection
 - **Agent-native** — stable JSON envelope, typed exit codes, `zot schema`, `--dry-run`, `--idempotency-key`, NDJSON streaming
 - **MCP server** — exposes 39 tools to Claude Desktop / LM Studio / Cursor via `zot mcp serve`
 
@@ -60,7 +60,7 @@ cp -r skill/zotero-cli ~/.claude/skills/
 When stdout is not a TTY, `zot` automatically emits a stable JSON envelope so agents never need `--json`:
 
 ```json
-{ "ok": true, "data": { ... }, "meta": { "request_id": "...", "cli_version": "0.4.3" } }
+{ "ok": true, "data": { ... }, "meta": { "schema_version": "1.11.0", "cli_version": "0.14.0", "request_id": "..." } }
 ```
 
 ## Documentation

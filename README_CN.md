@@ -18,7 +18,7 @@
 
 - **读操作** — 直接读取本地 SQLite，零配置、离线可用、毫秒级响应
 - **写操作** — 通过 Zotero Web API 安全写入，Zotero 完全感知变更
-- **PDF + 排序检索** — 提取 PDF 全文并自动缓存；免索引两阶段排序检索，覆盖全库或指定分类（Collection）
+- **PDF + 排序检索** — 提取 PDF 全文并自动缓存；免索引排序检索，基于 Zotero 10 自身的 FTS5 全文索引（`fulltext.sqlite`）以 bm25 打分，覆盖全库或指定分类（Collection）
 - **Agent-native** — 稳定 JSON envelope、类型化退出码、`zot schema`、`--dry-run`、`--idempotency-key`、NDJSON 流
 - **MCP 服务器** — 通过 `zot mcp serve` 向 Claude Desktop / LM Studio / Cursor 暴露 39 个工具
 
@@ -60,7 +60,7 @@ cp -r skill/zotero-cli ~/.claude/skills/
 当 stdout 不是终端时，`zot` 自动输出稳定的 JSON envelope，Agent 调用无需加 `--json`：
 
 ```json
-{ "ok": true, "data": { ... }, "meta": { "request_id": "...", "cli_version": "0.4.3" } }
+{ "ok": true, "data": { ... }, "meta": { "schema_version": "1.11.0", "cli_version": "0.14.0", "request_id": "..." } }
 ```
 
 ## 文档
