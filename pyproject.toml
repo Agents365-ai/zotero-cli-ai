@@ -1,6 +1,6 @@
 [project]
 name = "zotero-cli-ai"
-version = "0.14.0"
+version = "0.14.1"
 description = "Zotero CLI for any AI agent — SQLite reads + Web API writes"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE", "LICENSE-COMMERCIAL"]
@@ -22,6 +22,7 @@ dependencies = [
     "tomli>=2.0; python_version < '3.11'",
     "markdownify>=1.2.2",
     "requests>=2.31",
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +37,9 @@ pymupdf = ["pymupdf>=1.24", "pymupdf4llm>=0.0.17,<0.1"]
 # pdfplumber (pure Python, no ML/GPU/network) powers the 'pdfplumber' extractor's
 # table extraction. Optional so the core install stays lean.
 pdfplumber = ["pdfplumber>=0.11"]
+# Local similarity-network graphing (`zot net`): TF-IDF over the text corpus +
+# pyvis (vis-network) for the interactive HTML. Fully offline; no API.
+net = ["scikit-learn>=1.3", "pyvis>=0.3"]
 docs = [
     "mkdocs-material>=9.5",
     "mkdocs-static-i18n>=1.2",
@@ -71,7 +75,13 @@ dev = [
     "pymupdf>=1.24",
     "pymupdf4llm>=0.0.17,<0.1",
     "pdfplumber>=0.11",
+    "scikit-learn>=1.3",
+    "pyvis>=0.3",
 ]
+
+[[tool.mypy.overrides]]
+module = ["pyvis.*", "sklearn.*", "networkx.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 target-version = "py310"
