@@ -1,6 +1,6 @@
 [project]
 name = "zotero-cli-ai"
-version = "0.14.0"
+version = "0.14.1"
 description = "Zotero CLI for any AI agent — SQLite reads + Web API writes"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE", "LICENSE-COMMERCIAL"]
@@ -22,6 +22,7 @@ dependencies = [
     "tomli>=2.0; python_version < '3.11'",
     "markdownify>=1.2.2",
     "requests>=2.31",
+    "httpx>=0.27",
 ]
 
 [project.optional-dependencies]
