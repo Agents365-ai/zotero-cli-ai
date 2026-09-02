@@ -69,10 +69,7 @@ def update_cmd(
                     "validation_error",
                     f"Field '{k}' expects a JSON array/object value: {e}",
                     output_json=json_out,
-                    hint=(
-                        "Example: --field 'creators="
-                        '[{"creatorType":"author","firstName":"A","lastName":"B"}]\''
-                    ),
+                    hint=('Example: --field \'creators=[{"creatorType":"author","firstName":"A","lastName":"B"}]\''),
                     context="update",
                 )
         fields[k] = v

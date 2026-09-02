@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 
 import httpx
@@ -147,8 +148,12 @@ class ZoteroWriter:
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
 
-    def update_item(self, key: str, fields: dict[str, str]) -> None:
-        """Update item metadata fields."""
+    def update_item(self, key: str, fields: Mapping[str, object]) -> None:
+        """Update item metadata fields.
+
+        Values pass through to the Zotero API unmodified, so structured
+        fields (creators, tags, collections, relations) carry arrays/objects.
+        """
         try:
             item = self._zot.item(key)
             for field_name, value in fields.items():
