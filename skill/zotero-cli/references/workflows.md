@@ -111,48 +111,47 @@ zot --json collection items COLLKEY              # key, title, abstract, date, d
 ### B. Collection summary — summary based (map-reduce, full text)
 
 ```bash
-# 1. Full text per item — zot extracts and caches (no repeated cost)
-zot --json pdf --outline KEY                     # section headings only (token-cheap)
-zot --json pdf --section N KEY                   # read only the sections that matter
+# 1. Materialize full text once — one <KEY>.txt file per item, grep-able
+zot text --only-cached                           # instant if extraction cache is warm
+#    (per-paper drill-down without materializing: zot pdf --outline KEY / --section N KEY)
 
 # 2. Create a summary for each item — subagents in parallel (batch 3-5 papers):
+#    write ~/.config/zot/summary/<KEY>.md directly (no zot call needed):
+#    first line records provenance (model, date, source key); body is the
 #    bounded summary: problem / method / findings / relevance (~5 sentences)
-zot --json note KEY --add "**Summary** (<model>, <date>): ..."   # returns the note key
-zot tag NOTEEKEY --add "llm-summary"             # fixed address for the summary note
 
-# 3. Summarize the summaries
-zot --json summarize KEY                         # notes[:500] come back with the pack
-#    (or `zot note KEY` for full note text when a summary runs longer)
+# 3. Summarize the summaries — Read/Glob the summary files back
+#    optional library-visible copy: zot note KEY --add "..." (tagged llm-summary)
 zot note --standalone --add "## Collection summary: <name> ..."
 ```
 
 ### C. Summary / Q&A on a topic or key words, scoped to a collection
 
 ```bash
-# 1. Rank the collection's text against the key words (FTS, always fresh)
-zot --json search --ranked "KEY WORDS" --collection COLLKEY
+# 1. Materialize the corpus once (cached extraction, parallel workers)
+zot text                                         # ~/.config/zot/text/<KEY>.txt
 
-# 2. Extract the context around each hit in each paper — evidence passages,
-#    citation-keyed; internally re-ranks by term frequency over cached PDF text
-zot --json ask "topic question" --collection COLLKEY
+# 2. File-content search over the materialized text — hit filename = item key
+grep -rln "KEY WORDS" ~/.config/zot/text/        # -l: files containing matches
 
-# 3. Summarize from the extracted passages; cite with the returned item keys
+# 3. Collect the context around each hit (grep -C 3, or Read the file sections),
+#    then hand the collected passages to the LLM for the topic summary or Q&A
 ```
 
-Steps 1-2 of this pipeline are one `zot ask --collection` call away: `ask` runs the
-ranked retrieval AND carves the evidence passages in a single invocation. Use
-`search --ranked` first when you want to see the ranked item list before committing
-to evidence extraction.
+Index-based alternative for the same pipeline: `zot search --ranked "KEY WORDS"
+--collection COLLKEY` ranks the collection's text against the key words directly
+from Zotero's own FTS index (no materialization step, CJK tokenization handled), and
+`zot ask "topic question" --collection COLLKEY` returns citation-keyed evidence
+passages in one call. Prefer the index route for one-off questions over a large
+library; prefer the file route (grep) for repeated, hands-on analysis sessions.
 
-**Canonical storage for summaries (pipeline B).** Each per-paper summary lives in a
-child note on the item with the fixed tag `llm-summary` and a
-`**Summary** (<model>, <date>):` first line recording provenance. This is the
-summary's fixed address — the analog of full text living in the PDF plus Zotero's
-index. Not a local database: user data belongs in Zotero (synced, visible in the
-app), while zot's local databases are caches only. Retrieval today is per item
-(`zot summarize KEY` returns notes[:500]); the tag gives any future bulk export a
-stable anchor. The collection-level synthesis becomes a standalone note retrievable
-with `zot note --standalone`.
+**Local storage conventions.** Full text and summaries are per-item files under the
+zot config dir, keyed by the item key: `~/.config/zot/text/<KEY>.txt` (written by
+`zot text`) and `~/.config/zot/summary/<KEY>.md` (written by the agent during
+pipeline B, with a provenance first line: model, date, source key). Both are local
+working stores: fast for agents, regenerable, not synced with Zotero. When a summary
+should also be visible in the Zotero app (and travel with the library), mirror it
+into a child note with `zot note KEY --add "..."` — optionally tagged `llm-summary`.
 
 **Safety.** `zot note --add` mutates the library via the Web API and needs write
-credentials (`zot config init`).
+credentials (`zot config init`); the file-based stores above need no credentials.
