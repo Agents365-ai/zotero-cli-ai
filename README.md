@@ -62,6 +62,12 @@ README show what happens under the hood, not what you have to type.
 cp -r skill/zotero-cli ~/.claude/skills/
 ```
 
+**Make it yours.** The skill is plain Markdown — edit your installed copy or write
+your own skill on top of it: swap in your own workflows
+(`skill/zotero-cli/references/workflows.md`) and adapt the per-type summary
+templates to your discipline (`skill/zotero-cli/references/summary-templates.md`).
+Everything the AI does is readable, modifiable text; nothing is hidden in a binary.
+
 When stdout is not a TTY, `zot` automatically emits a stable JSON envelope so agents never need `--json`:
 
 ```json

@@ -57,6 +57,8 @@ zot add --doi "10.1038/s41586-023-06139-9"
 cp -r skill/zotero-cli ~/.claude/skills/
 ```
 
+**把它变成你的。** skill 就是纯 Markdown——直接修改安装后的副本，或在它之上写自己的 skill：替换成你自己的 workflow（`skill/zotero-cli/references/workflows.md`），把按类型分派的摘要模板改成你学科的风格（`skill/zotero-cli/references/summary-templates.md`）。AI 做的一切都是可读、可改的文本，没有任何藏在二进制里的东西。
+
 当 stdout 不是终端时，`zot` 自动输出稳定的 JSON envelope，Agent 调用无需加 `--json`：
 
 ```json
