@@ -22,6 +22,13 @@
 - **Agent-native** — stable JSON envelope, typed exit codes, `zot schema`, `--dry-run`, `--idempotency-key`, NDJSON streaming
 - **MCP server** — exposes 39 tools to Claude Desktop / LM Studio / Cursor via `zot mcp serve`
 
+> **You never need to learn these commands.** Install the bundled skill once, and the
+> AI does the rest: ask in natural language — "summarize this collection", "what have
+> I read about X?", "organize these papers" — and the skill maps each request to the
+> right `zot` calls, chains multi-step workflows, and writes per-paper summaries for
+> you. The commands in this README are what happens under the hood, not what you have
+> to type. → [Install the skill](#60-second-quickstart)
+
 ## Architecture
 
 <p align="center">
@@ -51,12 +58,7 @@ zot config init
 zot add --doi "10.1038/s41586-023-06139-9"
 ```
 
-**You never need to learn these commands.** Install the bundled skill once, and the
-AI does the rest: in Claude Code (or any skill-aware agent), just ask in natural
-language — "summarize this collection", "what have I read about X?", "organize these
-papers" — and the skill maps each request to the right `zot` calls, chains multi-step
-workflows, and writes per-paper summaries for you. The command examples in this
-README show what happens under the hood, not what you have to type.
+**One install, then just talk to your AI** (Claude Code or any skill-aware agent):
 
 ```bash
 cp -r skill/zotero-cli ~/.claude/skills/
