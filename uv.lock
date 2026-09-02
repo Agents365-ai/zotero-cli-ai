@@ -3055,17 +3055,12 @@ pymupdf = [
 dev = [
     { name = "httpx2" },
     { name = "mypy" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pdfplumber" },
     { name = "pymupdf" },
     { name = "pymupdf4llm" },
     { name = "pytest" },
     { name = "pytest-cov" },
-    { name = "pyvis" },
     { name = "ruff" },
-    { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "scikit-learn", version = "1.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 
 [package.metadata]
@@ -3096,13 +3091,10 @@ provides-extras = ["mcp", "pymupdf", "pdfplumber", "net", "docs"]
 dev = [
     { name = "httpx2", specifier = ">=2.12" },
     { name = "mypy", specifier = ">=1.14" },
-    { name = "networkx", specifier = ">=3.0" },
     { name = "pdfplumber", specifier = ">=0.11" },
     { name = "pymupdf", specifier = ">=1.24" },
     { name = "pymupdf4llm", specifier = ">=0.0.17,<0.1" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "pyvis", specifier = ">=0.3" },
     { name = "ruff", specifier = ">=0.9" },
-    { name = "scikit-learn", specifier = ">=1.3" },
 ]
