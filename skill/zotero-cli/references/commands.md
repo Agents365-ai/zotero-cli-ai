@@ -230,7 +230,17 @@ zot --json pdf ITEMKEY --references         # parsed reference list (needs GROBI
 zot --json pdf ITEMKEY --tables             # extract tables (needs [pdfplumber] extra)
 zot --json summarize ITEMKEY
 zot summarize-all
+zot text --dir ~/zot-text                # Materialize every PDF's text into <dir>/<itemkey>.txt for grep
 ```
+
+**Grep-able corpus**: `zot text` writes one file per item, named by the item
+key, using the item's first PDF attachment (same as `zot pdf`), so
+`grep -r "term" ~/zot-text/` returns hits whose filename is the key to pipe
+into `zot read KEY`. Missing PDFs are extracted in parallel worker
+processes (`--workers N`, default 4; run one per PDF so a poison PDF cannot
+crash the whole run). Text comes from the same cache as `zot pdf`; add
+`--only-cached` to skip extraction (uses only already-extracted entries).
+The extractor (pdfium default, pymupdf, mineru) is the configured one.
 
 **Token-saving strategy**: For large PDFs, use `--outline` to get section IDs first, then `--section` to extract only what you need.
 
@@ -266,6 +276,22 @@ zot open ITEMKEY                     # Open PDF in system viewer (human-facing)
 zot open --url ITEMKEY               # Open URL/DOI in browser
 zot update-status --limit 20        # Check preprint publication status (works without S2_API_KEY; key raises rate limits)
 ```
+
+## Similarity Network (zot net)
+
+Local, offline Connected-Papers-style graph: TF-IDF + cosine over the `zot text`
+corpus (title/abstract fallback), kNN edges, pyvis interactive HTML. Needs the
+`[net]` extra (`pip install 'zotero-cli-ai[net]'` -> scikit-learn + pyvis).
+
+```bash
+zot net --seed ITEMKEY --neighbors 40 --open     # CP-style: seed + nearest neighbours
+zot net --collection "RLHF" --out rlhf.html      # panorama over one collection
+zot net --out ~/library-graph.html               # whole-library kNN graph
+```
+
+Single self-contained HTML (double-click to open). Hover shows title/authors/year
+and the item key; pipe that into `zot read KEY` for details. Node size = degree,
+edge width = cosine similarity.
 
 ## Group Library
 

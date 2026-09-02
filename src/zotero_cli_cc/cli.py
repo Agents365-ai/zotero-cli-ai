@@ -23,6 +23,7 @@ from zotero_cli_cc.commands.export import export_cmd
 from zotero_cli_cc.commands.find_pdf import find_pdf_cmd
 from zotero_cli_cc.commands.list_cmd import list_cmd
 from zotero_cli_cc.commands.mcp import mcp_group
+from zotero_cli_cc.commands.net import net_cmd
 from zotero_cli_cc.commands.note import note_cmd
 from zotero_cli_cc.commands.open_cmd import open_cmd
 from zotero_cli_cc.commands.orphans import orphans_group
@@ -37,6 +38,9 @@ from zotero_cli_cc.commands.stats import stats_cmd
 from zotero_cli_cc.commands.summarize import summarize_cmd
 from zotero_cli_cc.commands.summarize_all import summarize_all_cmd
 from zotero_cli_cc.commands.tag import tag_cmd
+
+# pi-lens-ignore: Pyright:reportMissingImports
+from zotero_cli_cc.commands.text import text_cmd
 from zotero_cli_cc.commands.trash import trash_group
 from zotero_cli_cc.commands.update import update_cmd
 from zotero_cli_cc.commands.update_status import update_status_cmd
@@ -61,9 +65,11 @@ _READ_COMMANDS = {
     "duplicates",
     "collection",
     "tag",
+    "text",
     "config",
     "completions",
     "mcp",
+    "net",
     "ask",
     "schema",
     "trash",
@@ -285,12 +291,14 @@ main.add_command(note_cmd, "note")
 main.add_command(add_cmd, "add")
 main.add_command(delete_cmd, "delete")
 main.add_command(tag_cmd, "tag")
+main.add_command(text_cmd, "text")
 main.add_command(collection_group, "collection")
 main.add_command(summarize_cmd, "summarize")
 main.add_command(summarize_all_cmd, "summarize-all")
 main.add_command(pdf_cmd, "pdf")
 main.add_command(relate_cmd, "relate")
 main.add_command(mcp_group, "mcp")
+main.add_command(net_cmd, "net")
 main.add_command(stats_cmd, "stats")
 main.add_command(open_cmd, "open")
 main.add_command(cite_cmd, "cite")

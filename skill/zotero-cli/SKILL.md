@@ -30,7 +30,7 @@ zot --json search --ranked "RLHF" --collection my-collection  # Ranked search sc
 ## Routing Table
 
 | User Intent | Command |
-|-------------|---------|
+| ------------- | --------- |
 | Search metadata | `zot --json search "query"` |
 | Read item detail | `zot --json read KEY` |
 | Export BibTeX/RIS/JSON | `zot export KEY --format bibtex` |
@@ -56,6 +56,8 @@ zot --json search --ranked "RLHF" --collection my-collection  # Ranked search sc
 | Remove item from collection | `zot collection remove ITEM COLL` |
 | Ranked deep search | `zot --json search --ranked "q" --collection COLL` |
 | Ask (evidence pack) | `zot --json ask "question" --collection COLL` |
+| Grep-able full-text corpus | `zot text --dir ~/zot-text` → `grep -r "term" ~/zot-text/` (hit filename = item key) |
+| Similarity network graph | `zot net --seed KEY --open` or `zot net --collection COLL` (offline TF-IDF, needs [net] extra) |
 | Group library | `zot --library group:ID search "q"` |
 
 **Rule of thumb**: `zot search` for quick metadata + full-text lookups. `zot search --ranked` for relevance-ranked deep search with scores and snippets, optionally scoped to a collection via `--collection`. `zot ask` when you need a citation-keyed evidence pack to write a grounded answer — it returns chunks tagged with their Zotero item key plus `answer_instructions`; `zot` does not call an LLM, so *you* synthesize and cite the answer from the evidence.
@@ -63,7 +65,7 @@ zot --json search --ranked "RLHF" --collection my-collection  # Ranked search sc
 ## Global Flags
 
 | Flag | Purpose |
-|------|---------|
+| ------ | --------- |
 | `--json` | JSON output (always use for programmatic processing) |
 | `--limit N` | Limit results (default: 50) |
 | `--detail minimal` | Only key/title/authors/year — saves tokens |

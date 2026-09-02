@@ -37,6 +37,12 @@ pymupdf = ["pymupdf>=1.24", "pymupdf4llm>=0.0.17,<0.1"]
 # pdfplumber (pure Python, no ML/GPU/network) powers the 'pdfplumber' extractor's
 # table extraction. Optional so the core install stays lean.
 pdfplumber = ["pdfplumber>=0.11"]
+# Similarity network graph (zot net): offline TF-IDF + interactive HTML.
+net = [
+    "networkx>=3.0",
+    "pyvis>=0.3",
+    "scikit-learn>=1.3",
+]
 docs = [
     "mkdocs-material>=9.5",
     "mkdocs-static-i18n>=1.2",
