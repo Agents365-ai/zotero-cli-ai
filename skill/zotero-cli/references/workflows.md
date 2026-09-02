@@ -117,7 +117,8 @@ zot --json pdf --section N KEY                   # read only the sections that m
 
 # 2. Create a summary for each item — subagents in parallel (batch 3-5 papers):
 #    bounded summary: problem / method / findings / relevance (~5 sentences)
-zot note KEY --add "**Summary**: ..."            # persist per-paper summary as a note
+zot --json note KEY --add "**Summary** (<model>, <date>): ..."   # returns the note key
+zot tag NOTEEKEY --add "llm-summary"             # fixed address for the summary note
 
 # 3. Summarize the summaries
 zot --json summarize KEY                         # notes[:500] come back with the pack
@@ -143,9 +144,14 @@ ranked retrieval AND carves the evidence passages in a single invocation. Use
 `search --ranked` first when you want to see the ranked item list before committing
 to evidence extraction.
 
-**Why persist per-paper summaries to notes (pipeline B).** Notes are part of the
-library: the reduce stage reads them back with plain read commands, and so does any
-future session. The collection-level synthesis becomes a standalone note retrievable
+**Canonical storage for summaries (pipeline B).** Each per-paper summary lives in a
+child note on the item with the fixed tag `llm-summary` and a
+`**Summary** (<model>, <date>):` first line recording provenance. This is the
+summary's fixed address — the analog of full text living in the PDF plus Zotero's
+index. Not a local database: user data belongs in Zotero (synced, visible in the
+app), while zot's local databases are caches only. Retrieval today is per item
+(`zot summarize KEY` returns notes[:500]); the tag gives any future bulk export a
+stable anchor. The collection-level synthesis becomes a standalone note retrievable
 with `zot note --standalone`.
 
 **Safety.** `zot note --add` mutates the library via the Web API and needs write
