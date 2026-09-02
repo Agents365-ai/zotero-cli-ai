@@ -116,10 +116,13 @@ zot text --only-cached                           # instant if extraction cache i
 #    (per-paper drill-down without materializing: zot pdf --outline KEY / --section N KEY)
 
 # 2. Create a summary for each item — subagents in parallel (batch 3-5 papers):
-#    classify each item by title/abstract, then apply the matching template from
-#    references/summary-templates.md (method paper / research paper / review /
-#    generic). Write ~/.config/zot/summary/<KEY>.md: Obsidian-flavored markdown,
-#    YAML frontmatter (title, key, date, model, type tag), ## per section.
+#    compose the summary from two axes in references/summary-templates.md:
+#    the TYPE template (method / research / review / clinical / meta-analysis /
+#    dataset-resource / generic, classified from title+abstract) plus the
+#    DISCIPLINE lens (bioinformatics / clinical / ml-ai / wet-lab) appended as
+#    the final assessment section. Write ~/.config/zot/summary/<KEY>.md:
+#    Obsidian-flavored markdown, YAML frontmatter (title, key, date, model,
+#    type + discipline tags), ## per section.
 
 # 3. Summarize the summaries — Read/Glob the summary files back
 #    optional library-visible copy: zot note KEY --add "..." (tagged llm-summary)
