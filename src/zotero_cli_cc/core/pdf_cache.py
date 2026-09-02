@@ -22,6 +22,11 @@ class PdfCache:
             "  PRIMARY KEY (pdf_path, extractor)"
             ")"
         )
+        # Migrate cache DBs created before the extractor column existed (those
+        # have pdf_path as sole primary key); legacy rows keep extractor = ''.
+        cols = {row[1] for row in self._conn.execute("PRAGMA table_info(pdf_cache)")}
+        if "extractor" not in cols:
+            self._conn.execute("ALTER TABLE pdf_cache ADD COLUMN extractor TEXT NOT NULL DEFAULT ''")
         self._conn.commit()
 
     def get(self, pdf_path: Path, extractor_name: str = "") -> str | None:
