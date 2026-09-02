@@ -7,6 +7,30 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.14.2] - 2026-09-02
+
+### Added
+
+- **`zot text`** — materialize one `<KEY>.txt` per item under
+  `~/.config/zot/text/` (metadata header + first PDF attachment's text), so
+  `grep -r "term" <dir>` maps hits straight back to item keys. Extraction fans
+  out to per-PDF worker subprocesses; `--only-cached` for instant offline runs.
+- **`zot net`** (opt-in `[net]` extra) — offline TF-IDF similarity graph over the
+  item corpus, rendered to an interactive HTML; `--seed KEY` expands neighbours,
+  `--collection` scopes the graph.
+- **`zot update --field` structured fields** — `creators`, `tags`, `collections`,
+  `relations` now parse JSON values (e.g.
+  `--field 'creators=[{"creatorType":"author",...}]'`); malformed JSON fails
+  fast with a validation error instead of a raw API 400.
+
+### Fixed
+
+- **Write commands crash under pyzotero >= 1.15** (#109) — pyzotero switched to
+  its vendored `httpx2` fork; a stock `httpx.Timeout` assigned to that client
+  poisoned every write request (`TypeError: 'Timeout' object cannot be
+  interpreted as an integer`). The timeout is now assigned as a plain float,
+  and network-error handling covers both stacks.
+
 ## [0.14.0] - 2026-08-19
 
 ### Changed
