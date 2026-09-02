@@ -91,3 +91,49 @@ zot --json search --ranked "methodology comparison" --collection lit-review --li
 # 4. Or get a citation-keyed evidence pack for a grounded answer
 zot --json ask "which methodologies are compared?" --collection lit-review
 ```
+
+## Pattern 6: Collection Summary (map-reduce)
+
+Summarize a whole collection into one synthesis. zot supplies the materials and the
+storage; the summaries themselves are written by you (or subagents) — zot never calls
+an LLM. The map stage produces one bounded summary per paper; the reduce stage
+summarizes those summaries into a collection-level synthesis.
+
+### Map — one summary per paper
+
+```bash
+# 1. Enumerate the collection
+zot --json collection items COLLKEY              # key, title, abstract, date, doi
+
+# 2. Per paper — dispatch subagents in parallel (batch 3-5 papers per subagent):
+zot --json summarize KEY                         # abstract + existing notes material pack
+zot --json pdf --outline KEY                     # section headings only (token-cheap)
+zot --json pdf --section N KEY                   # read only the sections that matter
+#    subagent writes a bounded summary: problem / method / findings / relevance (~5 sentences)
+
+# 3. Persist it as a child note — it survives the session and feeds the reduce stage
+zot note KEY --add "**Summary**: ..."
+```
+
+### Reduce — summarize the summaries
+
+```bash
+# 4. Read the persisted per-paper summaries back
+zot --json summarize KEY                         # notes[:500] — sized for the map summaries
+#    (or `zot note KEY` for full note text when a summary runs longer)
+
+# 5. Write the collection-level synthesis; optionally persist it as a standalone note
+zot note --standalone --add "## Collection summary: <name> ..."
+```
+
+**Depth choice.** Triage/classification: abstract-level only (skip the pdf calls).
+Real literature review: outline + selective sections — never pull full PDF text for
+documents over ~20k chars (same budget rule as Pattern 1).
+
+**Why persist to notes.** Summaries stored as notes are part of the library: the reduce
+stage reads them back with plain read commands, and so does any future session. The
+collection-level synthesis becomes a standalone note retrievable with
+`zot note --standalone`.
+
+**Safety.** `zot note --add` mutates the library via the Web API and needs write
+credentials (`zot config init`).
