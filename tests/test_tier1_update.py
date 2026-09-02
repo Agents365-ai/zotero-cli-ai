@@ -75,6 +75,39 @@ class TestUpdateCommand:
         assert result.exit_code == 0
         mock_writer.update_item.assert_called_once_with("ATTN001", {"volume": "42"})
 
+    @patch("zotero_cli_cc.commands._helpers.ZoteroWriter")
+    def test_update_structured_field_json(self, mock_writer_cls):
+        mock_writer = MagicMock()
+        mock_writer_cls.return_value = mock_writer
+        creators = [{"creatorType": "author", "firstName": "Ada", "lastName": "Lovelace"}]
+        result = _invoke(["update", "ATTN001", "--field", f"creators={json.dumps(creators)}"])
+        assert result.exit_code == 0
+        mock_writer.update_item.assert_called_once_with("ATTN001", {"creators": creators})
+
+    @patch("zotero_cli_cc.commands._helpers.ZoteroWriter")
+    def test_update_tags_field_json(self, mock_writer_cls):
+        mock_writer = MagicMock()
+        mock_writer_cls.return_value = mock_writer
+        result = _invoke(["update", "ATTN001", "--field", 'tags=["machine learning", "reviewed"]'])
+        assert result.exit_code == 0
+        mock_writer.update_item.assert_called_once_with("ATTN001", {"tags": ["machine learning", "reviewed"]})
+
+    @patch("zotero_cli_cc.commands._helpers.ZoteroWriter")
+    def test_update_structured_field_invalid_json(self, mock_writer_cls):
+        result = _invoke(["update", "ATTN001", "--field", "creators=not-json"])
+        assert result.exit_code == 3
+        assert "creators" in result.output
+        mock_writer_cls.return_value.update_item.assert_not_called()
+
+    @patch("zotero_cli_cc.commands._helpers.ZoteroWriter")
+    def test_update_scalar_field_with_braces_stays_raw(self, mock_writer_cls):
+        # Non-whitelisted fields are never JSON-parsed, even if they look like JSON.
+        mock_writer = MagicMock()
+        mock_writer_cls.return_value = mock_writer
+        result = _invoke(["update", "ATTN001", "--field", "volume=[1,2]"])
+        assert result.exit_code == 0
+        mock_writer.update_item.assert_called_once_with("ATTN001", {"volume": "[1,2]"})
+
     def test_update_no_fields(self):
         result = _invoke(["update", "ATTN001"])
         assert result.exit_code != 0

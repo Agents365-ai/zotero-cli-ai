@@ -10,6 +10,10 @@ from zotero_cli_cc.core.writer import SYNC_REMINDER, ZoteroWriteError
 from zotero_cli_cc.exit_codes import emit_error
 from zotero_cli_cc.formatter import envelope_ok
 
+# Zotero item fields whose API value is an array/object, not a plain string.
+# --field values for these keys are parsed as JSON instead of stored raw.
+_STRUCTURED_FIELDS = {"creators", "tags", "collections", "relations"}
+
 
 @click.command("update")
 @click.argument("key")
@@ -36,12 +40,13 @@ def update_cmd(
       zot update ABC123 --date "2025-01-01"
       zot update ABC123 --field volume=42 --field pages=1-10
       zot update ABC123 --title "Title" --field abstractNote="New abstract"
+      zot update ABC123 --field 'creators=[{"creatorType":"author","firstName":"Ada","lastName":"Lovelace"}]'
       zot update ABC123 --title "New" --dry-run
     """
     cfg = load_config(profile=ctx.obj.get("profile"))
     json_out = ctx.obj.get("json", False)
 
-    fields: dict[str, str] = {}
+    fields: dict[str, object] = {}
     if title:
         fields["title"] = title
     if date:
@@ -56,6 +61,17 @@ def update_cmd(
                 context="update",
             )
         k, v = f.split("=", 1)
+        if k in _STRUCTURED_FIELDS:
+            try:
+                v = json.loads(v)
+            except json.JSONDecodeError as e:
+                emit_error(
+                    "validation_error",
+                    f"Field '{k}' expects a JSON array/object value: {e}",
+                    output_json=json_out,
+                    hint=('Example: --field \'creators=[{"creatorType":"author","firstName":"A","lastName":"B"}]\''),
+                    context="update",
+                )
         fields[k] = v
 
     if not fields:
