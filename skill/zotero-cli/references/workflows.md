@@ -116,9 +116,13 @@ zot text --only-cached                           # instant if extraction cache i
 #    (per-paper drill-down without materializing: zot pdf --outline KEY / --section N KEY)
 
 # 2. Create a summary for each item — subagents in parallel (batch 3-5 papers):
-#    write ~/.config/zot/summary/<KEY>.md directly (no zot call needed):
-#    first line records provenance (model, date, source key); body is the
-#    bounded summary: problem / method / findings / relevance (~5 sentences)
+#    compose the summary from two axes in references/summary-templates.md:
+#    the TYPE template (method / research / review / clinical / meta-analysis /
+#    dataset-resource / generic, classified from title+abstract) plus the
+#    DISCIPLINE lens (bioinformatics / clinical / ml-ai / wet-lab) appended as
+#    the final assessment section. Write ~/.config/zot/summary/<KEY>.md:
+#    Obsidian-flavored markdown, YAML frontmatter (title, key, date, model,
+#    type + discipline tags), ## per section.
 
 # 3. Summarize the summaries — Read/Glob the summary files back
 #    optional library-visible copy: zot note KEY --add "..." (tagged llm-summary)
@@ -148,10 +152,13 @@ library; prefer the file route (grep) for repeated, hands-on analysis sessions.
 **Local storage conventions.** Full text and summaries are per-item files under the
 zot config dir, keyed by the item key: `~/.config/zot/text/<KEY>.txt` (written by
 `zot text`) and `~/.config/zot/summary/<KEY>.md` (written by the agent during
-pipeline B, with a provenance first line: model, date, source key). Both are local
-working stores: fast for agents, regenerable, not synced with Zotero. When a summary
-should also be visible in the Zotero app (and travel with the library), mirror it
-into a child note with `zot note KEY --add "..."` — optionally tagged `llm-summary`.
+pipeline B, Obsidian-flavored with YAML frontmatter carrying provenance: title,
+key, date, model, type tag — templates in `references/summary-templates.md`). Both
+are local working stores: fast for agents, regenerable, not synced with Zotero.
+When a summary should also be visible in the Zotero app (and travel with the
+library), mirror its body into a child note with `zot note KEY --add "..."`
+optionally tagged `llm-summary` (strip the frontmatter first — `zot note` drops
+it during Markdown-to-HTML conversion).
 
 **Safety.** `zot note --add` mutates the library via the Web API and needs write
 credentials (`zot config init`); the file-based stores above need no credentials.
