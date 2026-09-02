@@ -22,6 +22,8 @@
 - **Agent-native** — 稳定 JSON envelope、类型化退出码、`zot schema`、`--dry-run`、`--idempotency-key`、NDJSON 流
 - **MCP 服务器** — 通过 `zot mcp serve` 向 Claude Desktop / LM Studio / Cursor 暴露 39 个工具
 
+> **你不需要学习这些命令。** 装好配套 skill 后，一切都交给 AI：直接说自然语言——"总结这个 collection"、"我读过的关于 X 的文献有哪些"、"整理这些论文"——skill 会自动把每个请求映射到正确的 `zot` 命令、串联多步流程，并替你写出每篇文献的摘要。README 里的命令是底层发生了什么，而不是你需要输入的东西。→ [安装 skill](#60-秒上手)
+
 ## 架构
 
 <p align="center">
@@ -51,7 +53,7 @@ zot config init
 zot add --doi "10.1038/s41586-023-06139-9"
 ```
 
-**你不需要学习这些命令。** 装好配套 skill 后，一切都交给 AI：在 Claude Code（或任何支持 skill 的 agent）里直接说自然语言——"总结这个 collection"、"我读过的关于 X 的文献有哪些"、"整理这些论文"——skill 会自动把每个请求映射到正确的 `zot` 命令、串联多步流程，并替你写出每篇文献的摘要。README 里的命令示例展示的是底层发生了什么，而不是你需要输入的东西。
+**一次安装，之后直接和你的 AI 对话**（Claude Code 或任何支持 skill 的 agent）：
 
 ```bash
 cp -r skill/zotero-cli ~/.claude/skills/
