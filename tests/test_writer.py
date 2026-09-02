@@ -1,7 +1,9 @@
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
 
+from zotero_cli_cc.core import writer
 from zotero_cli_cc.core.writer import ZoteroWriteError, ZoteroWriter
 
 
@@ -171,3 +173,45 @@ def test_rename_collection_not_found(mock_zotero_cls):
     writer = ZoteroWriter(library_id="123", api_key="abc")
     with pytest.raises(ZoteroWriteError, match="not found"):
         writer.rename_collection("NONEXIST", "New Name")
+
+
+# --- httpx / httpx2 dual-stack compatibility (issue #109) ---
+
+
+@patch("zotero_cli_cc.core.writer.zotero.Zotero")
+def test_timeout_lands_as_scalar_slots(mock_zotero_cls):
+    # A Timeout object fed into pyzotero's client crashes socket.settimeout()
+    # on the first request; the assigned value must be a plain float.
+    client = httpx.Client()
+    mock_zot = MagicMock()
+    mock_zot.client = client
+    mock_zotero_cls.return_value = mock_zot
+
+    ZoteroWriter(library_id="123", api_key="abc", timeout=30.0)
+    timeout = client.timeout
+    assert all(isinstance(getattr(timeout, slot), (int, float)) for slot in ("connect", "read", "write", "pool"))
+
+
+def test_network_errors_cover_httpx2_stack():
+    httpx2 = pytest.importorskip("httpx2")
+    assert httpx2.ConnectError in writer._network_errors
+    assert httpx2.TimeoutException in writer._network_errors
+    assert httpx.ConnectError in writer._network_errors
+    assert httpx.TimeoutException in writer._network_errors
+
+
+@patch("zotero_cli_cc.core.writer.zotero.Zotero")
+def test_add_standalone_note_httpx2_network_error(mock_zotero_cls):
+    # pyzotero >= 1.15 raises its vendored httpx2 exceptions; they must still
+    # map to a retryable ZoteroWriteError.
+    httpx2 = pytest.importorskip("httpx2")
+    mock_zot = MagicMock()
+    mock_zotero_cls.return_value = mock_zot
+    mock_zot.item_template.return_value = {"itemType": "note", "note": "", "parentItem": ""}
+    mock_zot.create_items.side_effect = httpx2.ConnectError("Network unreachable")
+
+    writer = ZoteroWriter(library_id="123", api_key="abc")
+    with pytest.raises(ZoteroWriteError, match="Network") as excinfo:
+        writer.add_standalone_note("content")
+    assert excinfo.value.code == "network_error"
+    assert excinfo.value.retryable is True
