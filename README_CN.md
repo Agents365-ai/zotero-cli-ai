@@ -63,6 +63,30 @@ cp -r skill/zotero-cli ~/.claude/skills/
 { "ok": true, "data": { ... }, "meta": { "schema_version": "1.11.0", "cli_version": "0.14.0", "request_id": "..." } }
 ```
 
+## 工作流：主题 → Collection → 摘要与问答
+
+从关键词或主题出发，收集文献、构建 Collection，再做结构化摘要和有出处的问答：
+
+```bash
+# 1. 收集文献 —— 按 DOI 列表导入，或对库内已有文献做排序检索
+zot add --from-file dois.txt                            # 每个 DOI 自动解析 Crossref 元数据
+zot search "T cell metabolic reprogramming" --ranked    # 或对库里已有文献打分排序
+
+# 2. 构建 Collection 并归类条目
+zot collection create "T-cell metabolism"               # 返回 collection key
+zot collection move ITEMKEY COLLECTIONKEY               # 逐条移动
+
+# 3. 摘要 —— 单条查看，或批量导出做分诊
+zot summarize ITEMKEY                                   # 单条结构化摘要
+zot summarize-all > abstracts.json                      # 全库 key + 标题 + 摘要
+
+# 4. 限定在 Collection 内的问答
+zot search "checkpoint resistance" --ranked --collection "T-cell metabolism"
+zot ask "which studies report exhausted T cell states?" --collection "T-cell metabolism"
+```
+
+`zot ask` 在 Collection 内执行排序检索，返回带条目 key 的证据包；由你的 Agent（Claude Code、Codex、Gemini CLI……）合成有引用的答案。在 Claude Code 里，配套 skill 一句自然语言即可跑完整个流程。
+
 ## 文档
 
 完整文档：**<https://agents365-ai.github.io/zotero-cli-ai/zh/>**
