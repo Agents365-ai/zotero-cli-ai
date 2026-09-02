@@ -92,54 +92,61 @@ zot --json search --ranked "methodology comparison" --collection lit-review --li
 zot --json ask "which methodologies are compared?" --collection lit-review
 ```
 
-## Pattern 6: Collection Summary (map-reduce)
+## Pattern 6: Collection Summary & Topic Q&A
 
-Summarize a whole collection into one synthesis. zot supplies the materials and the
+Summarize or run Q&A over a whole collection. zot supplies the materials and the
 storage; the summaries themselves are written by you (or subagents) — zot never calls
-an LLM. The map stage produces one bounded summary per paper; the reduce stage
-summarizes those summaries into a collection-level synthesis.
+an LLM. Three pipelines, chosen by the SOURCE the summary should be grounded in, not
+by collection size. PDF text extraction is cached, so repeated passes cost nothing.
 
-**Scale check first.** For a small collection (~10 papers or fewer), skip this pattern
-entirely: one `zot --json collection items COLLKEY` returns every title and abstract,
-and you can write the summary directly. Map-reduce earns its cost only when the
-collection is too large to hold in context (roughly 20+ papers), or when per-paper
-summaries should persist as notes for later reuse.
-
-### Map — one summary per paper
+### A. Collection summary — abstract based (fast)
 
 ```bash
-# 1. Enumerate the collection
+# 1. Abstracts of all items in the collection, one call
 zot --json collection items COLLKEY              # key, title, abstract, date, doi
 
-# 2. Per paper — dispatch subagents in parallel (batch 3-5 papers per subagent):
-zot --json summarize KEY                         # abstract + existing notes material pack
-zot --json pdf --outline KEY                     # section headings only (token-cheap)
-zot --json pdf --section N KEY                   # read only the sections that matter
-#    subagent writes a bounded summary: problem / method / findings / relevance (~5 sentences)
-
-# 3. Persist it as a child note — it survives the session and feeds the reduce stage
-zot note KEY --add "**Summary**: ..."
+# 2. Summarize the abstracts — direct synthesis, no per-paper step
 ```
 
-### Reduce — summarize the summaries
+### B. Collection summary — summary based (map-reduce, full text)
 
 ```bash
-# 4. Read the persisted per-paper summaries back
-zot --json summarize KEY                         # notes[:500] — sized for the map summaries
-#    (or `zot note KEY` for full note text when a summary runs longer)
+# 1. Full text per item — zot extracts and caches (no repeated cost)
+zot --json pdf --outline KEY                     # section headings only (token-cheap)
+zot --json pdf --section N KEY                   # read only the sections that matter
 
-# 5. Write the collection-level synthesis; optionally persist it as a standalone note
+# 2. Create a summary for each item — subagents in parallel (batch 3-5 papers):
+#    bounded summary: problem / method / findings / relevance (~5 sentences)
+zot note KEY --add "**Summary**: ..."            # persist per-paper summary as a note
+
+# 3. Summarize the summaries
+zot --json summarize KEY                         # notes[:500] come back with the pack
+#    (or `zot note KEY` for full note text when a summary runs longer)
 zot note --standalone --add "## Collection summary: <name> ..."
 ```
 
-**Depth choice.** Triage/classification: abstract-level only (skip the pdf calls).
-Real literature review: outline + selective sections — never pull full PDF text for
-documents over ~20k chars (same budget rule as Pattern 1).
+### C. Summary / Q&A on a topic or key words, scoped to a collection
 
-**Why persist to notes.** Summaries stored as notes are part of the library: the reduce
-stage reads them back with plain read commands, and so does any future session. The
-collection-level synthesis becomes a standalone note retrievable with
-`zot note --standalone`.
+```bash
+# 1. Rank the collection's text against the key words (FTS, always fresh)
+zot --json search --ranked "KEY WORDS" --collection COLLKEY
+
+# 2. Extract the context around each hit in each paper — evidence passages,
+#    citation-keyed; internally re-ranks by term frequency over cached PDF text
+zot --json ask "topic question" --collection COLLKEY
+
+# 3. Summarize from the extracted passages; cite with the returned item keys
+```
+
+Steps 1-2 of this pipeline are one `zot ask --collection` call away: `ask` runs the
+ranked retrieval AND carves the evidence passages in a single invocation. Use
+`search --ranked` first when you want to see the ranked item list before committing
+to evidence extraction.
+
+**Why persist per-paper summaries to notes (pipeline B).** Notes are part of the
+library: the reduce stage reads them back with plain read commands, and so does any
+future session. The collection-level synthesis becomes a standalone note retrievable
+with `zot note --standalone`.
 
 **Safety.** `zot note --add` mutates the library via the Web API and needs write
 credentials (`zot config init`).
