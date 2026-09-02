@@ -63,6 +63,30 @@ When stdout is not a TTY, `zot` automatically emits a stable JSON envelope so ag
 { "ok": true, "data": { ... }, "meta": { "schema_version": "1.11.0", "cli_version": "0.14.0", "request_id": "..." } }
 ```
 
+## Workflow: topic → collection → summary & QA
+
+From a keyword or topic to a curated collection with grounded summaries and cited Q&A:
+
+```bash
+# 1. Collect literature — import by DOI list, or rank what the library already has
+zot add --from-file dois.txt                            # Crossref-resolved metadata per DOI
+zot search "T cell metabolic reprogramming" --ranked    # or score what is already in the library
+
+# 2. Build a collection and file the items into it
+zot collection create "T-cell metabolism"               # returns the collection key
+zot collection move ITEMKEY COLLECTIONKEY               # repeat per item
+
+# 3. Summary — one item, or export abstracts for triage
+zot summarize ITEMKEY                                   # structured summary of one item
+zot summarize-all > abstracts.json                      # key + title + abstract, library-wide
+
+# 4. QA scoped to the collection
+zot search "checkpoint resistance" --ranked --collection "T-cell metabolism"
+zot ask "which studies report exhausted T cell states?" --collection "T-cell metabolism"
+```
+
+`zot ask` runs ranked retrieval over the collection and returns a citation-keyed evidence pack; your agent (Claude Code, Codex, Gemini CLI, ...) synthesizes the grounded answer. In Claude Code, the bundled skill runs this whole pipeline from a single natural-language request.
+
 ## Documentation
 
 Full docs live at **<https://agents365-ai.github.io/zotero-cli-ai/>**.
