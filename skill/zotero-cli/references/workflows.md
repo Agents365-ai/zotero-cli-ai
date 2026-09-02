@@ -99,6 +99,12 @@ storage; the summaries themselves are written by you (or subagents) — zot neve
 an LLM. The map stage produces one bounded summary per paper; the reduce stage
 summarizes those summaries into a collection-level synthesis.
 
+**Scale check first.** For a small collection (~10 papers or fewer), skip this pattern
+entirely: one `zot --json collection items COLLKEY` returns every title and abstract,
+and you can write the summary directly. Map-reduce earns its cost only when the
+collection is too large to hold in context (roughly 20+ papers), or when per-paper
+summaries should persist as notes for later reuse.
+
 ### Map — one summary per paper
 
 ```bash
