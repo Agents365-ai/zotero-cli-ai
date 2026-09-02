@@ -51,7 +51,7 @@ zot config init
 zot add --doi "10.1038/s41586-023-06139-9"
 ```
 
-在 Claude Code 中直接用自然语言提问——配套 skill 会自动把请求映射到 `zot` 命令：
+**你不需要学习这些命令。** 装好配套 skill 后，一切都交给 AI：在 Claude Code（或任何支持 skill 的 agent）里直接说自然语言——"总结这个 collection"、"我读过的关于 X 的文献有哪些"、"整理这些论文"——skill 会自动把每个请求映射到正确的 `zot` 命令、串联多步流程，并替你写出每篇文献的摘要。README 里的命令示例展示的是底层发生了什么，而不是你需要输入的东西。
 
 ```bash
 cp -r skill/zotero-cli ~/.claude/skills/
@@ -64,6 +64,8 @@ cp -r skill/zotero-cli ~/.claude/skills/
 ```
 
 ## 工作流：主题 → Collection → 摘要与问答
+
+> **以下命令无需手动执行。** 装好 skill 后，用自然语言描述目标即可，AI 会替你驱动这些命令。这里展示的是底层发生了什么——想手动跑也可以。
 
 从关键词或主题出发，收集文献、构建 Collection，再做结构化摘要和有出处的问答：
 

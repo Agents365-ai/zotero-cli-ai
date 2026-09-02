@@ -51,7 +51,12 @@ zot config init
 zot add --doi "10.1038/s41586-023-06139-9"
 ```
 
-In Claude Code, just ask in natural language — the bundled skill maps requests to `zot` commands automatically:
+**You never need to learn these commands.** Install the bundled skill once, and the
+AI does the rest: in Claude Code (or any skill-aware agent), just ask in natural
+language — "summarize this collection", "what have I read about X?", "organize these
+papers" — and the skill maps each request to the right `zot` calls, chains multi-step
+workflows, and writes per-paper summaries for you. The command examples in this
+README show what happens under the hood, not what you have to type.
 
 ```bash
 cp -r skill/zotero-cli ~/.claude/skills/
@@ -64,6 +69,10 @@ When stdout is not a TTY, `zot` automatically emits a stable JSON envelope so ag
 ```
 
 ## Workflow: topic → collection → summary & QA
+
+> **You never run any of this by hand.** With the skill installed, describe the goal
+> in natural language and the AI drives these commands for you. They are documented
+> here so you can see — or run manually, if you prefer — what happens under the hood.
 
 From a keyword or topic to a curated collection with grounded summaries and cited Q&A:
 
