@@ -3,11 +3,22 @@ from __future__ import annotations
 from collections.abc import Mapping
 from pathlib import Path
 
-import httpx
 from httpx import ConnectError as HttpxConnectError
 from httpx import TimeoutException as HttpxTimeoutException
 from pyzotero import zotero
 from pyzotero.zotero_errors import PyZoteroError, ResourceNotFoundError, UnsupportedParamsError, UserNotAuthorisedError
+
+# pyzotero >= 1.15 switched to its vendored httpx fork (httpx2), whose exception
+# classes are unrelated to stock httpx. Catch both stacks so network errors map
+# to ZoteroWriteError regardless of which client pyzotero built (issue #109).
+_network_errors: tuple[type[BaseException], ...] = (HttpxConnectError, HttpxTimeoutException)
+try:
+    from httpx2 import ConnectError as _Httpx2ConnectError
+    from httpx2 import TimeoutException as _Httpx2TimeoutException
+
+    _network_errors += (_Httpx2ConnectError, _Httpx2TimeoutException)
+except ImportError:  # pyzotero < 1.15 uses stock httpx only
+    pass
 
 SYNC_REMINDER = "Change saved. Run Zotero sync to update local database."
 
@@ -62,7 +73,10 @@ class ZoteroWriter:
     def __init__(self, library_id: str, api_key: str, library_type: str = "user", timeout: float = API_TIMEOUT) -> None:
         self._zot = zotero.Zotero(library_id, library_type, api_key)
         if self._zot.client is not None:
-            self._zot.client.timeout = httpx.Timeout(timeout)
+            # A plain float is accepted by both stock httpx and the httpx2 fork;
+            # a stock httpx.Timeout object would be swallowed whole by httpx2 and
+            # crash socket.settimeout() on the first request (issue #109).
+            self._zot.client.timeout = timeout
 
     def _check_response(self, resp: dict) -> str:
         """Check create response, return key or raise error."""
@@ -83,7 +97,7 @@ class ZoteroWriter:
             return self._check_response(resp)
         except ResourceNotFoundError:
             raise ZoteroWriteError(f"Parent item '{parent_key}' not found", code="not_found", retryable=False)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -96,7 +110,7 @@ class ZoteroWriter:
             template["note"] = content
             resp = self._zot.create_items([template])
             return self._check_response(resp)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -108,7 +122,7 @@ class ZoteroWriter:
             self._zot.update_item(item)
         except ResourceNotFoundError:
             raise ZoteroWriteError(f"Note '{note_key}' not found", code="not_found", retryable=False)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -143,7 +157,7 @@ class ZoteroWriter:
                 template.update(extra_fields)
             resp = self._zot.create_items([template])
             return self._check_response(resp)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -161,7 +175,7 @@ class ZoteroWriter:
             self._zot.update_item(item)
         except ResourceNotFoundError:
             raise ZoteroWriteError(f"Item '{key}' not found", code="not_found", retryable=False)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -183,7 +197,7 @@ class ZoteroWriter:
             return new_extra
         except ResourceNotFoundError:
             raise ZoteroWriteError(f"Item '{key}' not found", code="not_found", retryable=False)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -196,7 +210,7 @@ class ZoteroWriter:
             self._zot.update_item(item)
         except ResourceNotFoundError:
             raise ZoteroWriteError(f"Item '{key}' not found", code="not_found", retryable=False)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -221,7 +235,7 @@ class ZoteroWriter:
                 msg = resp["failure"][0].get("message", "Upload failed")
                 raise ZoteroWriteError(f"Attachment upload failed: {msg}", code="api_error", retryable=True)
             raise ZoteroWriteError("Unexpected empty response from attachment upload", code="api_error", retryable=True)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -232,7 +246,7 @@ class ZoteroWriter:
             self._zot.delete_item(item)
         except ResourceNotFoundError:
             raise ZoteroWriteError(f"Item '{key}' not found", code="not_found", retryable=False)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -246,7 +260,7 @@ class ZoteroWriter:
             self._zot.update_item(item)
         except ResourceNotFoundError:
             raise ZoteroWriteError(f"Item '{key}' not found", code="not_found", retryable=False)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -258,7 +272,7 @@ class ZoteroWriter:
             self._zot.update_item(item)
         except ResourceNotFoundError:
             raise ZoteroWriteError(f"Item '{key}' not found", code="not_found", retryable=False)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -268,7 +282,7 @@ class ZoteroWriter:
             payload = [{"name": name, "parentCollection": parent_key or False}]
             resp = self._zot.create_collections(payload)
             return self._check_response(resp)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -278,7 +292,7 @@ class ZoteroWriter:
             self._zot.addto_collection(collection_key, self._zot.item(item_key))
         except ResourceNotFoundError:
             raise ZoteroWriteError("Item or collection not found", code="not_found")
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -288,7 +302,7 @@ class ZoteroWriter:
             self._zot.deletefrom_collection(collection_key, self._zot.item(item_key))
         except ResourceNotFoundError:
             raise ZoteroWriteError("Item or collection not found", code="not_found")
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -299,7 +313,7 @@ class ZoteroWriter:
             self._zot.delete_collection(coll)
         except ResourceNotFoundError:
             raise ZoteroWriteError(f"Collection '{key}' not found", code="not_found", retryable=False)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e
@@ -311,7 +325,7 @@ class ZoteroWriter:
             self._zot.update_collection(coll)
         except ResourceNotFoundError:
             raise ZoteroWriteError(f"Collection '{key}' not found", code="not_found", retryable=False)
-        except (HttpxConnectError, HttpxTimeoutException) as e:
+        except _network_errors as e:
             raise ZoteroWriteError(f"Network error: {e}", code="network_error", retryable=True) from e
         except PyZoteroError as e:
             raise _friendly_api_error(e) from e

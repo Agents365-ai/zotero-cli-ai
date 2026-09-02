@@ -69,6 +69,7 @@ dev = [
     "pytest-cov>=7.0.0",
     "ruff>=0.9",
     "mypy>=1.14",
+    "httpx2>=2.12",  # pyzotero >= 1.15 vendored fork; keeps its error path under test
     "pymupdf>=1.24",
     "pymupdf4llm>=0.0.17,<0.1",
     "pdfplumber>=0.11",
